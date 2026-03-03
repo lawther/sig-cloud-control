@@ -113,9 +113,14 @@ class SigenClient:
         headers["content-type"] = "application/x-www-form-urlencoded"
 
         # Determine password to send
-        password_to_send = self.config.password_encoded or self.encrypt_password(
-            self.config.password  # type: ignore[arg-type]
-        )
+        if self.config.password_encoded:
+            password_to_send = self.config.password_encoded
+        elif self.config.password:
+            password_to_send = self.encrypt_password(self.config.password)
+        else:
+            # Unreachable due to Config validation
+            msg = "Neither password nor password_encoded provided"
+            raise SigenError(msg)
 
         data = {
             "scope": "server",
