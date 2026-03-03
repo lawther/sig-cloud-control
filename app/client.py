@@ -1,6 +1,7 @@
 import base64
 import logging
 import time
+from http import HTTPStatus
 from pathlib import Path
 from typing import Final
 from uuid import uuid4
@@ -20,8 +21,6 @@ from app.models import (
 )
 
 logger = logging.getLogger(__name__)
-
-HTTP_OK: Final[int] = 200
 
 
 class SigenError(Exception):
@@ -128,7 +127,7 @@ class SigenClient:
 
         response = await self.client.post(self._AUTH_URL, headers=headers, data=data)
 
-        if response.status_code != HTTP_OK:
+        if response.status_code != HTTPStatus.OK:
             logger.error("Login failed with status %s: %s", response.status_code, response.text)
             raise SigenError(f"Login failed with status {response.status_code}: {response.text}")
 
