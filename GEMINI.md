@@ -19,8 +19,6 @@
 # Running Tests
 
 - Use `uv run pytest` to run tests.
-- Use `uv run coverage run --branch --source=app -m pytest tests/test_sensor_mean.py` to check coverage.
-- Use `uv run python -m tests.fuzz_sensor_mean tests/corpus` to run the Atheris fuzzer.
 - Always use `AsyncMock` (not `MagicMock`) when mocking an `async def` function or callback. `MagicMock` silently swallows async/sync mismatches, giving false green tests.
 
 # Committing Code
