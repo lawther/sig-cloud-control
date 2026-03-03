@@ -185,6 +185,13 @@ def setup(
     ] = "config.toml",
 ):
     """Interactively setup credentials and save to config file."""
+    path = Path(config)
+    if path.exists():
+        typer.secho(
+            f"Warning: Configuration file '{config}' already exists and will be overwritten.",
+            fg=typer.colors.YELLOW,
+        )
+
     perform_setup(config)
 
 
