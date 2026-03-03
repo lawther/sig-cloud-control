@@ -1,6 +1,6 @@
 import base64
-from enum import Enum
-from typing import Self
+from enum import StrEnum
+from typing import Final, Self
 
 from pydantic import (
     BaseModel,
@@ -11,6 +11,10 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+
+PASSWORD_LEN_BYTES: Final[int] = 16
+MAX_DURATION_MINS: Final[int] = 1440
+MAX_POWER_LIMIT_KW: Final[float] = 100.0
 
 
 class Config(BaseModel):
@@ -41,21 +45,17 @@ class Config(BaseModel):
             return None
         try:
             decoded = base64.b64decode(v, validate=True)
-            if len(decoded) != 16:
-                raise ValueError(
-                    f"Decoded password must be exactly 16 bytes, got {len(decoded)}"
-                )
+            if len(decoded) != PASSWORD_LEN_BYTES:
+                raise ValueError(f"Decoded password must be exactly {PASSWORD_LEN_BYTES} bytes, got {len(decoded)}")
         except Exception as e:
-            if isinstance(e, ValueError) and "16 bytes" in str(e):
+            if isinstance(e, ValueError) and f"{PASSWORD_LEN_BYTES} bytes" in str(e):
                 raise
             raise ValueError("password_encoded must be a valid base64 string") from e
         return v
 
 
 class LoginResponse(BaseModel):
-    """
-    Standard OAuth 2.0 Access Token Response (RFC 6749, Section 5.1).
-    """
+    """Standard OAuth 2.0 Access Token Response (RFC 6749, Section 5.1)."""
 
     access_token: str
     """The access token issued by the authorisation server."""
@@ -76,7 +76,7 @@ class TokenCache(BaseModel):
     station_id: int | None = Field(default=None, gt=0)
 
 
-class OperationMode(str, Enum):
+class OperationMode(StrEnum):
     CHARGE = "0"
     DISCHARGE = "1"
     HOLD = "2"
@@ -104,33 +104,29 @@ class SetModeRequest(BaseModel):
         match self.mode:
             case OperationMode.CANCEL:
                 if self.duration is not None or self.power_limitation is not None:
-                    raise ValueError(
-                        "duration and power_limitation must be null/None when mode is CANCEL"
-                    )
+                    raise ValueError("duration and power_limitation must be null/None when mode is CANCEL")
 
             case OperationMode.CHARGE | OperationMode.DISCHARGE:
                 self._validate_duration()
                 if self.power_limitation is not None:
                     if self.power_limitation <= 0:
-                        raise ValueError(
-                            "power_limitation must be a positive number (> 0)"
+                        raise ValueError("power_limitation must be a positive number (> 0)")
+                    if self.power_limitation > MAX_POWER_LIMIT_KW:
+                        msg = (
+                            f"power_limitation {self.power_limitation} kW "
+                            f"exceeds sanity limit of {MAX_POWER_LIMIT_KW} kW"
                         )
-                    if self.power_limitation > 100.0:
-                        raise ValueError(
-                            f"power_limitation {self.power_limitation} kW exceeds sanity limit of 100 kW"
-                        )
+                        raise ValueError(msg)
 
             case OperationMode.HOLD | OperationMode.SELF_CONSUMPTION:
                 self._validate_duration()
                 if self.power_limitation is not None:
-                    raise ValueError(
-                        f"power_limitation is not supported for mode {self.mode.name}"
-                    )
+                    raise ValueError(f"power_limitation is not supported for mode {self.mode.name}")
         return self
 
     def _validate_duration(self) -> None:
         """Shared helper to validate mandatory duration."""
         if self.duration is None:
             raise ValueError(f"duration is required for mode {self.mode.name}")
-        if not (1 <= self.duration <= 1440):
-            raise ValueError("duration must be between 1 and 1440 minutes")
+        if not (1 <= self.duration <= MAX_DURATION_MINS):
+            raise ValueError(f"duration must be between 1 and {MAX_DURATION_MINS} minutes")

@@ -10,9 +10,18 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from pydantic import ValidationError
 
-from app.models import Config, LoginResponse, OperationMode, SetModeRequest, TokenCache
+from app.models import (
+    MAX_DURATION_MINS,
+    Config,
+    LoginResponse,
+    OperationMode,
+    SetModeRequest,
+    TokenCache,
+)
 
 logger = logging.getLogger(__name__)
+
+HTTP_OK: Final[int] = 200
 
 
 class SigenError(Exception):
@@ -58,7 +67,11 @@ class SigenClient:
                 "sg-pkg": "sigen_app",
                 "sg-session": self._session_id,
                 "sg-v": "3.4.0",
-                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+                "user-agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/145.0.0.0 Safari/537.36"
+                ),
             }
         )
 
@@ -87,9 +100,7 @@ class SigenClient:
         """Authenticate with the Sigen API and store the access token. Checks cache first."""
         if use_cache:
             cache = self._load_cache()
-            if (
-                cache and cache.expires_at > time.time() + 60
-            ):  # Valid for at least another minute
+            if cache and cache.expires_at > time.time() + 60:  # Valid for at least another minute
                 logger.debug("Using cached token")
                 self.access_token = cache.access_token
                 self.client.headers["authorization"] = f"bearer {self.access_token}"
@@ -103,11 +114,9 @@ class SigenClient:
         headers["content-type"] = "application/x-www-form-urlencoded"
 
         # Determine password to send
-        if self.config.password_encoded:
-            password_to_send = self.config.password_encoded
-        else:
-            # Type checked by Config model validator
-            password_to_send = self.encrypt_password(self.config.password)  # type: ignore
+        password_to_send = self.config.password_encoded or self.encrypt_password(
+            self.config.password  # type: ignore[arg-type]
+        )
 
         data = {
             "scope": "server",
@@ -119,31 +128,21 @@ class SigenClient:
 
         response = await self.client.post(self._AUTH_URL, headers=headers, data=data)
 
-        if response.status_code != 200:
-            logger.error(
-                "Login failed with status %s: %s", response.status_code, response.text
-            )
-            raise SigenError(
-                f"Login failed with status {response.status_code}: {response.text}"
-            )
+        if response.status_code != HTTP_OK:
+            logger.error("Login failed with status %s: %s", response.status_code, response.text)
+            raise SigenError(f"Login failed with status {response.status_code}: {response.text}")
 
         try:
             payload = response.json()
             # Handle potential wrapping or direct payload
-            token_data = (
-                payload.get("data", payload) if isinstance(payload, dict) else payload
-            )
+            token_data = payload.get("data", payload) if isinstance(payload, dict) else payload
             login_response = LoginResponse.model_validate(token_data)
         except ValidationError as e:
             logger.error("Failed to parse login response: %s", response.text)
-            raise SigenError(
-                f"Failed to parse login response. Raw payload: {response.text}. Error: {e}"
-            ) from e
+            raise SigenError(f"Failed to parse login response. Raw payload: {response.text}. Error: {e}") from e
         except Exception as e:
             logger.error("Unexpected error parsing login response: %s", response.text)
-            raise SigenError(
-                f"Unexpected error parsing login response: {e}. Raw payload: {response.text}"
-            ) from e
+            raise SigenError(f"Unexpected error parsing login response: {e}. Raw payload: {response.text}") from e
 
         self.access_token = login_response.access_token
         self.client.headers["authorization"] = f"bearer {self.access_token}"
@@ -200,9 +199,7 @@ class SigenClient:
             raise SigenError("Not logged in. Call login() first.")
 
         if self._station_id is None:
-            raise SigenError(
-                "Station ID unknown. Login may have failed to retrieve it."
-            )
+            raise SigenError("Station ID unknown. Login may have failed to retrieve it.")
 
         request_data = SetModeRequest(
             station_id=self._station_id,
@@ -229,8 +226,8 @@ class SigenClient:
         duration_min: int,
         power_kw: float | None = None,
     ) -> None:
-        if duration_min <= 0 or duration_min > 1440:
-            raise SigenError("Duration must be between 1 and 1440 minutes (24 hours).")
+        if duration_min <= 0 or duration_min > MAX_DURATION_MINS:
+            raise SigenError(f"Duration must be between 1 and {MAX_DURATION_MINS} minutes (24 hours).")
 
         # UI always sends a cancel before starting a new mode
         await self.cancel_self_control()
@@ -241,24 +238,16 @@ class SigenClient:
             power_limitation=power_kw,
         )
 
-    async def charge_battery(
-        self, duration_min: int, power_kw: float | None = None
-    ) -> None:
+    async def charge_battery(self, duration_min: int, power_kw: float | None = None) -> None:
         await self._start_mode(OperationMode.CHARGE, duration_min, power_kw)
 
-    async def discharge_battery(
-        self, duration_min: int, power_kw: float | None = None
-    ) -> None:
+    async def discharge_battery(self, duration_min: int, power_kw: float | None = None) -> None:
         await self._start_mode(OperationMode.DISCHARGE, duration_min, power_kw)
 
-    async def hold_battery(
-        self, duration_min: int, power_kw: float | None = None
-    ) -> None:
+    async def hold_battery(self, duration_min: int, power_kw: float | None = None) -> None:
         await self._start_mode(OperationMode.HOLD, duration_min, power_kw)
 
-    async def self_consumption(
-        self, duration_min: int, power_kw: float | None = None
-    ) -> None:
+    async def self_consumption(self, duration_min: int, power_kw: float | None = None) -> None:
         await self._start_mode(OperationMode.SELF_CONSUMPTION, duration_min, power_kw)
 
     async def cancel_self_control(self) -> None:

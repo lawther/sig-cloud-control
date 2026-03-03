@@ -1,10 +1,14 @@
 # Sigen Cloud Control Configuration
 # Obtain your credentials from the Sigen Cloud dashboard.
 # username = Your Sigenergy username, e.g. "your_email@example.com"
-# password_encoded = "..." (The encoded password string seen in browser requests)
 
 username = "your_email@example.com"
-password_encoded = "..."
+
+# Provide either your plaintext password:
+password = "your_password"
+
+# OR your encoded password (use 'uv run main.py setup' to generate this):
+# password_encoded = "..."
 
 # station_id is optional. If omitted, the library will fetch it automatically.
 # station_id = 123456789

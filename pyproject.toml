@@ -18,3 +18,62 @@ dependencies = [
 dev = [
     "ruff~=0.15",
 ]
+
+[tool.ruff]
+line-length = 120
+# these are explanation of the rules that are selected:
+# B: Basic checks
+# C4: Code complexity checks
+# D: Docstring checks
+# E: Error checks
+# F: Formatting checks
+# I: Import checks
+# ICN: Import convention checks
+# PGH: Python grammar checks
+# PL: Pylint checks
+# RUF: Ruff checks
+# UP: Unused code checks
+# ANN: Type annotation checks
+# ASYNC: Async code checks
+# SIM: Simple checks
+# LOG: Logging checks
+lint.select = [
+  "B",
+  "C4",
+  "D",
+  "E",
+  "F",
+  "I",
+  "ICN",
+  "PGH",
+  "PL",
+  "RUF",
+  "UP",
+  "ANN",
+  "ASYNC",
+  "SIM",
+  "LOG",
+]
+lint.ignore = [
+  # pydocstyle
+  # D1: Missing docstring in public module
+  "D100",
+  # D2: Missing docstring in public package
+  "D104",
+  # D3: Missing docstring in public function
+  "D103",
+  # D4: Missing docstring in public package
+  "D107",
+  # D5: Missing docstring in public method
+  "D102",
+  # D6: Missing docstring in public class
+  "D101",
+  # D7: Missing docstring in __init__
+  "D107",
+  # pylint
+  # PLR09: Too many <...>
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+]
+lint.pydocstyle.convention = "google"
