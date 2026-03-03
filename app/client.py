@@ -1,0 +1,238 @@
+import logging
+import time
+from pathlib import Path
+from uuid import uuid4
+
+import httpx
+from pydantic import ValidationError
+
+from app.models import Config, LoginResponse, OperationMode, SetModeRequest, TokenCache
+
+logger = logging.getLogger(__name__)
+
+
+class SigenError(Exception):
+    pass
+
+
+class SigenClient:
+    BASE_URL = "https://api-aus.sigencloud.com"
+    AUTH_URL = f"{BASE_URL}/auth/oauth/token"
+    MANUAL_MODE_URL = f"{BASE_URL}/device/energy-profile/instant/manunal"
+    STATION_INFO_URL = f"{BASE_URL}/device/owner/station/home"
+    CACHE_PATH = Path(".sig-control-cache.json")
+
+    def __init__(self, config: Config) -> None:
+        self.config = config
+        self.client = httpx.AsyncClient()
+        self.access_token: str | None = None
+        self._station_id: int | None = config.station_id
+
+        # Setup base headers mimicking the app
+        self._session_id = str(uuid4())
+        self.client.headers.update(
+            {
+                "accept": "*/*",
+                "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
+                "auth-client-id": "sigen",
+                "client-server": "aus",
+                "lang": "en_US",
+                "origin": "https://app-aus.sigencloud.com",
+                "referer": "https://app-aus.sigencloud.com/",
+                "sec-ch-ua": '"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"macOS"',
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-site",
+                "sg-bui": "1",
+                "sg-env": "1",
+                "sg-pkg": "sigen_app",
+                "sg-session": self._session_id,
+                "sg-v": "3.4.0",
+                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+            }
+        )
+
+    def _get_ts_headers(self) -> dict[str, str]:
+        return {
+            "sg-log-id": str(uuid4()),
+            "sg-ts": str(int(time.time() * 1_000_000)),
+        }
+
+    async def login(self, use_cache: bool = True) -> None:
+        """Authenticate with the Sigen API and store the access token. Checks cache first."""
+        if use_cache:
+            cache = self._load_cache()
+            if (
+                cache and cache.expires_at > time.time() + 60
+            ):  # Valid for at least another minute
+                logger.debug("Using cached token")
+                self.access_token = cache.access_token
+                self.client.headers["authorization"] = f"bearer {self.access_token}"
+                if self._station_id is None:
+                    self._station_id = cache.station_id
+                return
+
+        logger.info("Logging in to Sigen Cloud as %s", self.config.username)
+        headers = self._get_ts_headers()
+        headers["authorization"] = "Basic c2lnZW46c2lnZW4="
+        headers["content-type"] = "application/x-www-form-urlencoded"
+
+        data = {
+            "scope": "server",
+            "grant_type": "password",
+            "userDeviceId": str(int(time.time() * 1000)),
+            "username": self.config.username,
+            "password": self.config.password_encoded,
+        }
+
+        response = await self.client.post(self.AUTH_URL, headers=headers, data=data)
+
+        if response.status_code != 200:
+            logger.error(
+                "Login failed with status %s: %s", response.status_code, response.text
+            )
+            raise SigenError(
+                f"Login failed with status {response.status_code}: {response.text}"
+            )
+
+        try:
+            payload = response.json()
+            # Handle potential wrapping or direct payload
+            token_data = (
+                payload.get("data", payload) if isinstance(payload, dict) else payload
+            )
+            login_response = LoginResponse.model_validate(token_data)
+        except ValidationError as e:
+            logger.error("Failed to parse login response: %s", response.text)
+            raise SigenError(
+                f"Failed to parse login response. Raw payload: {response.text}. Error: {e}"
+            ) from e
+        except Exception as e:
+            logger.error("Unexpected error parsing login response: %s", response.text)
+            raise SigenError(
+                f"Unexpected error parsing login response: {e}. Raw payload: {response.text}"
+            ) from e
+
+        self.access_token = login_response.access_token
+        self.client.headers["authorization"] = f"bearer {self.access_token}"
+
+        # If station_id wasn't provided in config, fetch it
+        if self._station_id is None:
+            await self._fetch_station_id()
+
+        self._save_cache(login_response.expires_in_secs)
+        logger.info("Successfully logged in and cached token")
+
+    def _load_cache(self) -> TokenCache | None:
+        """Load the token from the cache file if it exists and is valid."""
+        if not self.CACHE_PATH.exists():
+            return None
+        try:
+            return TokenCache.model_validate_json(self.CACHE_PATH.read_text())
+        except (ValidationError, Exception):
+            return None
+
+    def _save_cache(self, expires_in: int) -> None:
+        """Save the current token and station ID to the cache file."""
+        cache = TokenCache(
+            access_token=self.access_token,
+            expires_at=time.time() + expires_in,
+            station_id=self._station_id,
+        )
+        self.CACHE_PATH.write_text(cache.model_dump_json())
+        self.CACHE_PATH.chmod(0o600)  # Ensure the file is not world-readable
+
+    async def _fetch_station_id(self) -> None:
+        """Fetch the station ID from the home info endpoint."""
+        logger.debug("Fetching station ID from %s", self.STATION_INFO_URL)
+        headers = self._get_ts_headers()
+        response = await self.client.get(self.STATION_INFO_URL, headers=headers)
+        response.raise_for_status()
+
+        data = response.json()
+        if data.get("code") == 0 and "data" in data:
+            self._station_id = data["data"].get("stationId")
+
+        if self._station_id is None:
+            logger.error("Could not retrieve station ID. Response: %s", response.text)
+            raise SigenError("Could not retrieve station ID from Sigen Cloud.")
+        logger.debug("Fetched station ID: %s", self._station_id)
+
+    async def _set_mode_raw(
+        self,
+        mode: OperationMode,
+        duration: int | None = None,
+        power_limitation: float | None = None,
+    ) -> None:
+        if not self.access_token:
+            raise SigenError("Not logged in. Call login() first.")
+
+        if self._station_id is None:
+            raise SigenError(
+                "Station ID unknown. Login may have failed to retrieve it."
+            )
+
+        request_data = SetModeRequest(
+            station_id=self._station_id,
+            mode=mode,
+            duration=duration,
+            power_limitation=power_limitation,
+        )
+
+        logger.debug("Sending mode update: %s", request_data.model_dump(by_alias=True))
+        headers = self._get_ts_headers()
+        headers["content-type"] = "application/json; charset=utf-8"
+
+        response = await self.client.put(
+            self.MANUAL_MODE_URL,
+            headers=headers,
+            json=request_data.model_dump(mode="json", by_alias=True),
+        )
+        response.raise_for_status()
+        logger.info("Successfully updated mode to %s", mode.name)
+
+    async def _start_mode(
+        self,
+        mode: OperationMode,
+        duration_min: int,
+        power_kw: float | None = None,
+    ) -> None:
+        if duration_min <= 0 or duration_min > 1440:
+            raise SigenError("Duration must be between 1 and 1440 minutes (24 hours).")
+
+        # UI always sends a cancel before starting a new mode
+        await self.cancel_self_control()
+
+        await self._set_mode_raw(
+            mode=mode,
+            duration=duration_min,
+            power_limitation=power_kw,
+        )
+
+    async def charge_battery(
+        self, duration_min: int, power_kw: float | None = None
+    ) -> None:
+        await self._start_mode(OperationMode.CHARGE, duration_min, power_kw)
+
+    async def discharge_battery(
+        self, duration_min: int, power_kw: float | None = None
+    ) -> None:
+        await self._start_mode(OperationMode.DISCHARGE, duration_min, power_kw)
+
+    async def hold_battery(
+        self, duration_min: int, power_kw: float | None = None
+    ) -> None:
+        await self._start_mode(OperationMode.HOLD, duration_min, power_kw)
+
+    async def self_consumption(
+        self, duration_min: int, power_kw: float | None = None
+    ) -> None:
+        await self._start_mode(OperationMode.SELF_CONSUMPTION, duration_min, power_kw)
+
+    async def cancel_self_control(self) -> None:
+        await self._set_mode_raw(mode=OperationMode.CANCEL)
+
+    async def aclose(self) -> None:
+        await self.client.aclose()

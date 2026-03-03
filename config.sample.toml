@@ -1,0 +1,10 @@
+# Sigen Cloud Control Configuration
+# Obtain your credentials from the Sigen Cloud dashboard.
+# username = Your Sigenergy username, e.g. "your_email@example.com"
+# password_encoded = "..." (The encoded password string seen in browser requests)
+
+username = "your_email@example.com"
+password_encoded = "..."
+
+# station_id is optional. If omitted, the library will fetch it automatically.
+# station_id = 123456789

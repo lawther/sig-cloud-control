@@ -1,0 +1,18 @@
+[project]
+name = "sig-control"
+version = "0.1.0"
+description = "Control Sigenergy battery via Sigen Cloud"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx~=0.28",
+    "pydantic[email]~=2.12",
+    "pytest~=9.0",
+    "pytest-asyncio~=1.3",
+    "typer~=0.24",
+]
+
+[dependency-groups]
+dev = [
+    "ruff~=0.15",
+]
