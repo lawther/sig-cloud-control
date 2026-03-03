@@ -5,7 +5,9 @@ description = "Control Sigenergy battery via Sigen Cloud"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "cryptography>=46.0.5",
     "httpx~=0.28",
+    "pycryptodome>=3.23.0",
     "pydantic[email]~=2.12",
     "pytest~=9.0",
     "pytest-asyncio~=1.3",

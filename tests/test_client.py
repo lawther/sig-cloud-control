@@ -21,6 +21,12 @@ def client(config):
     return SigenClient(config)
 
 
+def test_encrypt_password():
+    password = "Sigen12345!"
+    expected = "rV6FkNoIMt8nyDRbAUH/aw=="
+    assert SigenClient.encrypt_password(password) == expected
+
+
 @pytest.mark.asyncio
 async def test_login_success(client):
     # Mock response for login

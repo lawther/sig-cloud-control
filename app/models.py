@@ -19,15 +19,26 @@ class Config(BaseModel):
     username: EmailStr
     """The user's Sigen Cloud email address."""
 
-    password_encoded: str
+    password: str | None = None
+    """The user's plaintext password (will be encoded automatically)."""
+
+    password_encoded: str | None = None
     """The base64 encoded/encrypted password from the browser."""
 
     station_id: int | None = Field(default=None, gt=0)
     """Optional station ID. Must be positive if provided."""
 
+    @model_validator(mode="after")
+    def validate_password_source(self) -> Self:
+        if self.password is None and self.password_encoded is None:
+            raise ValueError("Either 'password' or 'password_encoded' must be provided")
+        return self
+
     @field_validator("password_encoded")
     @classmethod
-    def validate_password_encoded(cls, v: str) -> str:
+    def validate_password_encoded(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
         try:
             decoded = base64.b64decode(v, validate=True)
             if len(decoded) != 16:

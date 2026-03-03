@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import tomllib
+from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
@@ -10,6 +11,27 @@ from app.client import SigenClient, SigenError
 from app.models import Config
 
 app = typer.Typer(help="Control a Sigen solar/battery station.")
+
+
+def perform_setup(config_path: str) -> Config:
+    """Interactively prompt for credentials and save to file."""
+    typer.echo(f"Setting up new configuration at '{config_path}'...")
+    username = typer.prompt("Sigen Cloud Email")
+    password = typer.prompt("Sigen Cloud Password", hide_input=True)
+
+    # Encrypt the password
+    password_encoded = SigenClient.encrypt_password(password)
+
+    config_content = f'username = "{username}"\n'
+    config_content += f'password_encoded = "{password_encoded}"\n'
+
+    with open(config_path, "w") as f:
+        f.write(config_content)
+
+    typer.secho(f"Configuration saved to {config_path}", fg=typer.colors.GREEN)
+    typer.echo("Note: Your password has been encrypted for storage.")
+
+    return Config(username=username, password_encoded=password_encoded)
 
 
 async def execute_action(
@@ -26,24 +48,22 @@ async def execute_action(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    try:
-        with open(config_path, "rb") as f:
-            config_data = tomllib.load(f)
-        config = Config.model_validate(config_data)
-    except FileNotFoundError:
-        typer.secho(
-            f"Error: Config file not found at '{config_path}'",
-            fg=typer.colors.RED,
-            err=True,
-        )
-        raise typer.Exit(code=1)
-    except ValidationError as e:
-        typer.secho(
-            f"Error: Invalid configuration format in '{config_path}':\n{e}",
-            fg=typer.colors.RED,
-            err=True,
-        )
-        raise typer.Exit(code=1)
+    path = Path(config_path)
+    if not path.exists():
+        typer.secho(f"Config file not found at '{config_path}'", fg=typer.colors.YELLOW)
+        config = perform_setup(config_path)
+    else:
+        try:
+            with open(config_path, "rb") as f:
+                config_data = tomllib.load(f)
+            config = Config.model_validate(config_data)
+        except ValidationError as e:
+            typer.secho(
+                f"Error: Invalid configuration format in '{config_path}':\n{e}",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(code=1)
 
     client = SigenClient(config)
     try:
@@ -156,6 +176,16 @@ def cancel(
 ):
     """Cancel any active manual control."""
     asyncio.run(execute_action(config, "cancel", verbose=verbose))
+
+
+@app.command()
+def setup(
+    config: Annotated[
+        str, typer.Option(help="Path to the TOML configuration file to create")
+    ] = "config.toml",
+):
+    """Interactively setup credentials and save to config file."""
+    perform_setup(config)
 
 
 if __name__ == "__main__":
