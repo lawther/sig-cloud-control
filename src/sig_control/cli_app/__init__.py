@@ -7,8 +7,8 @@ from typing import Annotated
 import typer
 from pydantic import ValidationError
 
-from app.client import SigenClient, SigenError
-from app.models import Config
+from sig_control.client import SigenClient, SigenError
+from sig_control.models import Config
 
 app = typer.Typer(help="Control a Sigen solar/battery station.")
 

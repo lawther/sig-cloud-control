@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from app.client import SigenClient, SigenError
-from app.models import Config, OperationMode
+from sig_control.client import SigenClient, SigenError
+from sig_control.models import Config, OperationMode
 
 
 @pytest.fixture

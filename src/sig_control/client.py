@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from pydantic import ValidationError
 
-from app.models import (
+from .models import (
     MAX_DURATION_MINS,
     Config,
     LoginResponse,
