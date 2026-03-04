@@ -23,22 +23,27 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-class SigenError(Exception):
+class SigCloudError(Exception):
+    """Base exception for SigCloudClient."""
+
     pass
 
 
-class SigenClient:
+class SigCloudClient:
+    """Client for interacting with Sigen Cloud API."""
+
     _BASE_URL: Final[str] = "https://api-aus.sigencloud.com"
     _AUTH_URL: Final[str] = f"{_BASE_URL}/auth/oauth/token"
     _MANUAL_MODE_URL: Final[str] = f"{_BASE_URL}/device/energy-profile/instant/manunal"
     _STATION_INFO_URL: Final[str] = f"{_BASE_URL}/device/owner/station/home"
-    _CACHE_PATH: Final[Path] = Path(".sig-control-cache.json")
+    _CACHE_PATH: Final[Path] = Path(".sig-cloud-control-cache.json")
 
     # Fixed key and IV used by Sigen Cloud
     _ENCRYPT_KEY: Final[bytes] = b"sigensigensigenp"
     _ENCRYPT_IV: Final[bytes] = b"sigensigensigenp"
 
     def __init__(self, config: Config) -> None:
+        """Initialize the client with configuration."""
         self.config = config
         self.client = httpx.AsyncClient()
         self.access_token: str | None = None
@@ -87,8 +92,8 @@ class SigenClient:
         padded_data = padder.update(password.encode()) + padder.finalize()
 
         cipher = Cipher(
-            algorithms.AES(SigenClient._ENCRYPT_KEY),
-            modes.CBC(SigenClient._ENCRYPT_IV),
+            algorithms.AES(SigCloudClient._ENCRYPT_KEY),
+            modes.CBC(SigCloudClient._ENCRYPT_IV),
         )
         encryptor = cipher.encryptor()
         ct = encryptor.update(padded_data) + encryptor.finalize()
@@ -120,7 +125,7 @@ class SigenClient:
         else:
             # Unreachable due to Config validation
             msg = "Neither password nor password_encoded provided"
-            raise SigenError(msg)
+            raise SigCloudError(msg)
 
         data = {
             "scope": "server",
@@ -134,7 +139,7 @@ class SigenClient:
 
         if response.status_code != HTTPStatus.OK:
             logger.error("Login failed with status %s: %s", response.status_code, response.text)
-            raise SigenError(f"Login failed with status {response.status_code}: {response.text}")
+            raise SigCloudError(f"Login failed with status {response.status_code}: {response.text}")
 
         try:
             payload = response.json()
@@ -143,10 +148,10 @@ class SigenClient:
             login_response = LoginResponse.model_validate(token_data)
         except ValidationError as e:
             logger.error("Failed to parse login response: %s", response.text)
-            raise SigenError(f"Failed to parse login response. Raw payload: {response.text}. Error: {e}") from e
+            raise SigCloudError(f"Failed to parse login response. Raw payload: {response.text}. Error: {e}") from e
         except Exception as e:
             logger.error("Unexpected error parsing login response: %s", response.text)
-            raise SigenError(f"Unexpected error parsing login response: {e}. Raw payload: {response.text}") from e
+            raise SigCloudError(f"Unexpected error parsing login response: {e}. Raw payload: {response.text}") from e
 
         self.access_token = login_response.access_token
         self.client.headers["authorization"] = f"bearer {self.access_token}"
@@ -190,7 +195,7 @@ class SigenClient:
 
         if self._station_id is None:
             logger.error("Could not retrieve station ID. Response: %s", response.text)
-            raise SigenError("Could not retrieve station ID from Sigen Cloud.")
+            raise SigCloudError("Could not retrieve station ID from Sigen Cloud.")
         logger.debug("Fetched station ID: %s", self._station_id)
 
     async def _set_mode_raw(
@@ -199,11 +204,12 @@ class SigenClient:
         duration: int | None = None,
         power_limitation: float | None = None,
     ) -> None:
+        """Directly set the manual mode on the station."""
         if not self.access_token:
-            raise SigenError("Not logged in. Call login() first.")
+            raise SigCloudError("Not logged in. Call login() first.")
 
         if self._station_id is None:
-            raise SigenError("Station ID unknown. Login may have failed to retrieve it.")
+            raise SigCloudError("Station ID unknown. Login may have failed to retrieve it.")
 
         request_data = SetModeRequest(
             station_id=self._station_id,
@@ -230,8 +236,9 @@ class SigenClient:
         duration_min: int,
         power_kw: float | None = None,
     ) -> None:
+        """Execute the full sequence to start a manual mode."""
         if duration_min <= 0 or duration_min > MAX_DURATION_MINS:
-            raise SigenError(f"Duration must be between 1 and {MAX_DURATION_MINS} minutes (24 hours).")
+            raise SigCloudError(f"Duration must be between 1 and {MAX_DURATION_MINS} minutes (24 hours).")
 
         # UI always sends a cancel before starting a new mode
         await self.cancel_self_control()
@@ -243,19 +250,25 @@ class SigenClient:
         )
 
     async def charge_battery(self, duration_min: int, power_kw: float | None = None) -> None:
+        """Force charge the battery from the grid."""
         await self._start_mode(OperationMode.CHARGE, duration_min, power_kw)
 
     async def discharge_battery(self, duration_min: int, power_kw: float | None = None) -> None:
+        """Force discharge the battery."""
         await self._start_mode(OperationMode.DISCHARGE, duration_min, power_kw)
 
     async def hold_battery(self, duration_min: int, power_kw: float | None = None) -> None:
+        """Hold the battery at its current SOC."""
         await self._start_mode(OperationMode.HOLD, duration_min, power_kw)
 
     async def self_consumption(self, duration_min: int, power_kw: float | None = None) -> None:
+        """Set to self-consumption mode."""
         await self._start_mode(OperationMode.SELF_CONSUMPTION, duration_min, power_kw)
 
     async def cancel_self_control(self) -> None:
+        """Stop any active manual control."""
         await self._set_mode_raw(mode=OperationMode.CANCEL)
 
     async def aclose(self) -> None:
+        """Close the underlying HTTP client."""
         await self.client.aclose()

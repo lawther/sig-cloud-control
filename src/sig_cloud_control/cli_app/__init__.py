@@ -7,8 +7,8 @@ from typing import Annotated
 import typer
 from pydantic import ValidationError
 
-from sig_control.client import SigenClient, SigenError
-from sig_control.models import Config
+from sig_cloud_control.client import SigCloudClient, SigCloudError
+from sig_cloud_control.models import Config
 
 app = typer.Typer(help="Control a Sigen solar/battery station.")
 
@@ -20,7 +20,7 @@ def perform_setup(config_path: str) -> Config:
     password = typer.prompt("Sigen Cloud Password", hide_input=True)
 
     # Encrypt the password
-    password_encoded = SigenClient.encrypt_password(password)
+    password_encoded = SigCloudClient.encrypt_password(password)
 
     config_content = f'username = "{username}"\n'
     config_content += f'password_encoded = "{password_encoded}"\n'
@@ -68,7 +68,7 @@ async def execute_action(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
-    client = SigenClient(config)
+    client = SigCloudClient(config)
     try:
         await client.login()
 
@@ -85,7 +85,7 @@ async def execute_action(
 
         typer.secho("Action completed successfully.", fg=typer.colors.GREEN)
 
-    except SigenError as e:
+    except SigCloudError as e:
         typer.secho(f"Sigen API Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     finally:

@@ -3,7 +3,7 @@ import base64
 import pytest
 from pydantic import ValidationError
 
-from sig_control.models import Config, OperationMode, SetModeRequest
+from sig_cloud_control.models import Config, OperationMode, SetModeRequest
 
 
 def test_config_valid() -> None:

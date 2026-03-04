@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from sig_control.client import SigenClient, SigenError
-from sig_control.models import Config, OperationMode
+from sig_cloud_control.client import SigCloudClient, SigCloudError
+from sig_cloud_control.models import Config, OperationMode
 
 
 @pytest.fixture
@@ -18,18 +18,18 @@ def config() -> Config:
 
 
 @pytest.fixture
-def client(config: Config) -> SigenClient:
-    return SigenClient(config)
+def client(config: Config) -> SigCloudClient:
+    return SigCloudClient(config)
 
 
 def test_encrypt_password() -> None:
     password = "Sigen12345!"
     expected = "rV6FkNoIMt8nyDRbAUH/aw=="
-    assert SigenClient.encrypt_password(password) == expected
+    assert SigCloudClient.encrypt_password(password) == expected
 
 
 @pytest.mark.asyncio
-async def test_login_success(client: SigenClient) -> None:
+async def test_login_success(client: SigCloudClient) -> None:
     # Mock response for login
     # We use MagicMock for the response because json() and raise_for_status() are sync in httpx
     mock_response = MagicMock(spec=httpx.Response)
@@ -42,8 +42,8 @@ async def test_login_success(client: SigenClient) -> None:
 
     with (
         patch.object(httpx.AsyncClient, "post", return_value=mock_response) as mock_post,
-        patch.object(SigenClient, "_save_cache"),
-        patch.object(SigenClient, "_load_cache", return_value=None),
+        patch.object(SigCloudClient, "_save_cache"),
+        patch.object(SigCloudClient, "_load_cache", return_value=None),
     ):
         await client.login()
 
@@ -57,7 +57,7 @@ async def test_login_success(client: SigenClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_start_mode_calls_cancel_first(client: SigenClient) -> None:
+async def test_start_mode_calls_cancel_first(client: SigCloudClient) -> None:
     client.access_token = "fake_token"
     client.client.headers["authorization"] = "bearer fake_token"
 
@@ -90,10 +90,10 @@ async def test_start_mode_calls_cancel_first(client: SigenClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_invalid_duration_raises_error(client: SigenClient) -> None:
+async def test_invalid_duration_raises_error(client: SigCloudClient) -> None:
     client.access_token = "fake_token"
-    with pytest.raises(SigenError, match="Duration must be between 1 and 1440"):
+    with pytest.raises(SigCloudError, match="Duration must be between 1 and 1440"):
         await client.charge_battery(0)
 
-    with pytest.raises(SigenError, match="Duration must be between 1 and 1440"):
+    with pytest.raises(SigCloudError, match="Duration must be between 1 and 1440"):
         await client.charge_battery(1441)

@@ -475,7 +475,7 @@ wheels = [
 ]
 
 [[package]]
-name = "sig-control"
+name = "sig-cloud-control"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -499,10 +499,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cryptography", specifier = ">=46.0.5" },
+    { name = "cryptography", specifier = "~=46.0" },
     { name = "httpx", specifier = "~=0.28" },
     { name = "pydantic", extras = ["email"], specifier = "~=2.12" },
-    { name = "tomli", marker = "python_full_version < '3.11' and extra == 'cli'" },
     { name = "typer", marker = "extra == 'cli'", specifier = "~=0.24" },
 ]
 provides-extras = ["cli"]

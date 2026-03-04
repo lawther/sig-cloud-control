@@ -1,4 +1,4 @@
-# sig-control
+# sig-cloud-control
 
 A Python library and CLI for controlling Sigenergy (Sigen Cloud) solar and battery systems.
 
@@ -17,7 +17,7 @@ This project uses `uv` for dependency management.
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd sig-control
+cd sig-cloud-control
 
 # Install dependencies
 uv sync
@@ -42,30 +42,30 @@ password = "your_plaintext_password"
 
 ## CLI Usage
 
-Run the CLI using `uv run main.py`:
+Run the CLI using `uv run sig-cloud-control`:
 
 ```bash
 # Setup credentials interactively (safest way to encrypt password)
-uv run main.py setup
+uv run sig-cloud-control setup
 
 # Self-consumption for 30 minutes
-uv run main.py self-consumption 30
+uv run sig-cloud-control self-consumption 30
 
 # Charge battery for 60 minutes at 2.5kW
-uv run main.py charge 60 --power 2.5
+uv run sig-cloud-control charge 60 --power 2.5
 
 # Cancel any active manual control
-uv run main.py cancel
+uv run sig-cloud-control cancel
 ```
 
 ## API Usage
 
-You can also use `sig-control` as a library in your own asynchronous Python applications:
+You can also use `sig-cloud-control` as a library in your own asynchronous Python applications:
 
 ```python
 import asyncio
-from app.client import SigenClient
-from app.models import Config
+from sig_cloud_control.client import SigCloudClient
+from sig_cloud_control.models import Config
 
 async def main():
     # Initialize config (password will be encrypted automatically)
@@ -74,21 +74,23 @@ async def main():
         password="my_secret_password"
     )
 
-    client = SigenClient(config)
+    client = SigCloudClient(config)
     try:
         # Login (uses cache if available)
         await client.login()
-        
+
         # Force charge for 60 minutes at 5.0kW
         await client.charge_battery(duration_min=60, power_kw=5.0)
-        
+
         print("Charge command issued successfully.")
-        
+
     finally:
         await client.aclose()
 
 if __name__ == "__main__":
     asyncio.run(main())
+```
+
 ```
 
 ## Development

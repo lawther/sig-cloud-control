@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "sig-control"
+name = "sig-cloud-control"
 version = "0.1.0"
 description = "Control Sigenergy battery via Sigen Cloud"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "cryptography>=46.0.5",
+    "cryptography~=46.0",
     "httpx~=0.28",
     "pydantic[email]~=2.12",
 ]
@@ -17,11 +17,10 @@ dependencies = [
 [project.optional-dependencies]
 cli = [
     "typer~=0.24",
-    "tomli; python_version < '3.11'",
 ]
 
 [project.scripts]
-sig-control = "sig_control.cli_app:app"
+sig-cloud-control = "sig_cloud_control.cli_app:app"
 
 [dependency-groups]
 dev = [
@@ -32,7 +31,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/sig_control"]
+packages = ["src/sig_cloud_control"]
 
 [tool.ruff]
 line-length = 120
