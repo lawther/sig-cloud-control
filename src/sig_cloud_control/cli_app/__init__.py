@@ -62,7 +62,7 @@ def load_config(config_path: str) -> Config:
         return Config.model_validate(config_data)
     except ValidationError as e:
         typer.secho(
-            f"Error: Invalid configuration format in '{config_path}':\n{e}",
+            f"❌ Error: Invalid configuration format in '{config_path}':\n{e}",
             fg=typer.colors.RED,
             err=True,
         )
@@ -87,7 +87,7 @@ async def execute_action(
 
     client = SigCloudClient(config)
     try:
-        typer.echo("🔐 Logging in to Sigen Cloud...")
+        typer.echo("Logging in to Sigen Cloud...")
         await client.login()
 
         with console.status(f"Executing '{action}' action...", spinner="dots"):
@@ -102,8 +102,7 @@ async def execute_action(
             elif action == "cancel":
                 await client.cancel_self_control()
 
-        typer.secho("✔︎  ", fg=typer.colors.GREEN, bold=True, nl=False)
-        typer.secho("Success! Action completed.", fg=typer.colors.GREEN)
+        console.print(f"[bold green]✔︎  [/bold green]Executing '{action}' action... [bold green]Done.[/bold green]")
 
     except SigCloudError as e:
         typer.secho(f"❌ Sigen API Error: {e}", fg=typer.colors.RED, err=True)
