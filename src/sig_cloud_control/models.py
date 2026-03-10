@@ -45,10 +45,12 @@ class Config(BaseModel):
             return None
         try:
             decoded = base64.b64decode(v, validate=True)
-            if len(decoded) != PASSWORD_LEN_BYTES:
-                raise ValueError(f"Decoded password must be exactly {PASSWORD_LEN_BYTES} bytes, got {len(decoded)}")
+            if len(decoded) == 0 or len(decoded) % PASSWORD_LEN_BYTES != 0:
+                raise ValueError(
+                    f"Decoded password length ({len(decoded)}) must be a positive multiple of {PASSWORD_LEN_BYTES}"
+                )
         except Exception as e:
-            if isinstance(e, ValueError) and f"{PASSWORD_LEN_BYTES} bytes" in str(e):
+            if isinstance(e, ValueError) and f"multiple of {PASSWORD_LEN_BYTES}" in str(e):
                 raise
             raise ValueError("password_encoded must be a valid base64 string") from e
         return v

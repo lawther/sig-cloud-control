@@ -19,8 +19,15 @@ def test_config_invalid_email() -> None:
 def test_config_invalid_password_length() -> None:
     # Only 15 bytes decoded
     short_pass = base64.b64encode(b"123456789012345").decode()
-    with pytest.raises(ValidationError, match="Decoded password must be exactly 16 bytes"):
+    with pytest.raises(ValidationError, match="must be a positive multiple of 16"):
         Config(username="user@example.com", password_encoded=short_pass)
+
+
+def test_config_valid_long_password() -> None:
+    # 32 bytes (valid multiple of 16)
+    long_pass = base64.b64encode(b"1234567890123456" * 2).decode()
+    config = Config(username="user@example.com", password_encoded=long_pass)
+    assert config.password_encoded == long_pass
 
 
 def test_config_invalid_base64() -> None:
