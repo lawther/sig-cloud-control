@@ -154,7 +154,7 @@ cython_debug/
 
 # Project specific
 config.toml
-.sig-control-cache.json
+.sig-cloud-control-cache.json
 
 # macOS
 .DS_Store
