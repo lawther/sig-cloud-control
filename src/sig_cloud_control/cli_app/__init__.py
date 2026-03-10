@@ -6,17 +6,30 @@ from typing import Annotated
 
 import typer
 from pydantic import ValidationError
+from rich.console import Console
 
 from sig_cloud_control.client import SigCloudClient, SigCloudError
 from sig_cloud_control.models import Config
 
 app = typer.Typer(help="Control a Sigen solar/battery station.")
 
+LOG_FILE = "sig-cloud-control.log"
+console = Console()
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context) -> None:
+    """Control a Sigen solar/battery station."""
+    if ctx.invoked_subcommand is None:
+        typer.secho("Missing command.", fg=typer.colors.RED, err=True)
+        typer.echo(ctx.get_help())
+        raise typer.Exit(code=1)
+
 
 def perform_setup(config_path: str) -> Config:
     """Interactively prompt for credentials and save to file."""
     typer.echo(f"Setting up new configuration at '{config_path}'...")
-    username = typer.prompt("Sigen Cloud Email")
+    username = typer.prompt("Sigen Cloud login name (eg. user@example.com)")
     password = typer.prompt("Sigen Cloud Password", hide_input=True)
 
     # Encrypt the password
@@ -28,7 +41,8 @@ def perform_setup(config_path: str) -> Config:
     with open(config_path, "w") as f:
         f.write(config_content)
 
-    typer.secho(f"Configuration saved to {config_path}", fg=typer.colors.GREEN)
+    typer.secho("✔︎  ", fg=typer.colors.GREEN, bold=True, nl=False)
+    typer.secho(f"Success! Configuration saved to {config_path}", fg=typer.colors.GREEN)
     typer.echo("Note: Your password has been encrypted for storage.")
 
     return Config(username=username, password_encoded=password_encoded)
@@ -36,9 +50,10 @@ def perform_setup(config_path: str) -> Config:
 
 def load_config(config_path: str) -> Config:
     """Load configuration from file, or perform setup if missing."""
+    typer.echo("Loading configuration...")
     path = Path(config_path)
     if not path.exists():
-        typer.secho(f"Config file not found at '{config_path}'", fg=typer.colors.YELLOW)
+        typer.secho(f"⚠️  Config file not found at '{config_path}'", fg=typer.colors.YELLOW)
         return perform_setup(config_path)
 
     try:
@@ -66,27 +81,32 @@ async def execute_action(
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        filename=LOG_FILE,
+        filemode="a",
     )
 
     client = SigCloudClient(config)
     try:
+        typer.echo("🔐 Logging in to Sigen Cloud...")
         await client.login()
 
-        if action == "charge":
-            await client.charge_battery(duration, power)
-        elif action == "discharge":
-            await client.discharge_battery(duration, power)
-        elif action == "hold":
-            await client.hold_battery(duration, power)
-        elif action == "self-consumption":
-            await client.self_consumption(duration, power)
-        elif action == "cancel":
-            await client.cancel_self_control()
+        with console.status(f"Executing '{action}' action...", spinner="dots"):
+            if action == "charge":
+                await client.charge_battery(duration, power)
+            elif action == "discharge":
+                await client.discharge_battery(duration, power)
+            elif action == "hold":
+                await client.hold_battery(duration, power)
+            elif action == "self-consumption":
+                await client.self_consumption(duration, power)
+            elif action == "cancel":
+                await client.cancel_self_control()
 
-        typer.secho("Action completed successfully.", fg=typer.colors.GREEN)
+        typer.secho("✔︎  ", fg=typer.colors.GREEN, bold=True, nl=False)
+        typer.secho("Success! Action completed.", fg=typer.colors.GREEN)
 
     except SigCloudError as e:
-        typer.secho(f"Sigen API Error: {e}", fg=typer.colors.RED, err=True)
+        typer.secho(f"❌ Sigen API Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e
     finally:
         await client.aclose()
@@ -158,7 +178,7 @@ def setup(
     path = Path(config)
     if path.exists():
         typer.secho(
-            f"Warning: Configuration file '{config}' already exists and will be overwritten.",
+            f"⚠️  Warning: Configuration file '{config}' already exists and will be overwritten.",
             fg=typer.colors.YELLOW,
         )
 
