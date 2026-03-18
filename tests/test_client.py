@@ -97,3 +97,34 @@ async def test_invalid_duration_raises_error(client: SigCloudClient) -> None:
 
     with pytest.raises(SigCloudError, match="Duration must be between 1 and 1440"):
         await client.charge_battery(1441)
+
+
+@pytest.mark.asyncio
+async def test_login_failure(client: SigCloudClient) -> None:
+    # Mock response for failed login (e.g., 401 Unauthorized)
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 401
+    mock_response.text = "Unauthorized"
+
+    with (
+        patch.object(httpx.AsyncClient, "post", return_value=mock_response),
+        patch.object(SigCloudClient, "_load_cache", return_value=None),
+    ):
+        with pytest.raises(SigCloudError, match="Login failed with status 401: Unauthorized"):
+            await client.login()
+
+
+@pytest.mark.asyncio
+async def test_login_invalid_json_payload(client: SigCloudClient) -> None:
+    # Mock response for login with 200 OK but invalid JSON payload
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 200
+    mock_response.json.side_effect = ValueError("Invalid JSON")
+    mock_response.text = "invalid_json_here"
+
+    with (
+        patch.object(httpx.AsyncClient, "post", return_value=mock_response),
+        patch.object(SigCloudClient, "_load_cache", return_value=None),
+    ):
+        with pytest.raises(SigCloudError, match="Unexpected error parsing login response"):
+            await client.login()
