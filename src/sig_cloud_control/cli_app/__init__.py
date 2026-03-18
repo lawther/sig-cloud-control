@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import tomllib
 from pathlib import Path
@@ -35,8 +36,8 @@ def perform_setup(config_path: str) -> Config:
     # Encrypt the password
     password_encoded = SigCloudClient.encrypt_password(password)
 
-    config_content = f'username = "{username}"\n'
-    config_content += f'password_encoded = "{password_encoded}"\n'
+    config_content = f"username = {json.dumps(username)}\n"
+    config_content += f"password_encoded = {json.dumps(password_encoded)}\n"
 
     with open(config_path, "w") as f:
         f.write(config_content)
