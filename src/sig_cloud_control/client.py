@@ -86,6 +86,38 @@ class SigCloudClient:
             "sg-ts": str(int(time.time() * 1_000_000)),
         }
 
+    def _try_login_from_cache(self) -> bool:
+        """Attempt to load credentials from the local cache. Returns True if successful."""
+        cache = self._load_cache()
+        if cache and cache.expires_at > time.time() + 60:  # Valid for at least another minute
+            logger.debug("Using cached token")
+            self.access_token = cache.access_token
+            self.client.headers["authorization"] = f"bearer {self.access_token}"
+            if self._station_id is None:
+                self._station_id = cache.station_id
+            return True
+        return False
+
+    def _get_login_payload(self) -> dict[str, str]:
+        """Prepare the payload for the login request."""
+        # Determine password to send
+        if self.config.password_encoded:
+            password_to_send = self.config.password_encoded
+        elif self.config.password:
+            password_to_send = self.encrypt_password(self.config.password)
+        else:
+            # Unreachable due to Config validation
+            msg = "Neither password nor password_encoded provided"
+            raise SigCloudError(msg)
+
+        return {
+            "scope": "server",
+            "grant_type": "password",
+            "userDeviceId": str(int(time.time() * 1000)),
+            "username": self.config.username,
+            "password": password_to_send,
+        }
+
     @staticmethod
     def encrypt_password(password: str) -> str:
         """Encrypt a plaintext password using Sigen's AES-128-CBC logic."""
@@ -103,38 +135,15 @@ class SigCloudClient:
 
     async def login(self, use_cache: bool = True) -> None:
         """Authenticate with the Sigen API and store the access token. Checks cache first."""
-        if use_cache:
-            cache = await self._load_cache()
-            if cache and cache.expires_at > time.time() + 60:  # Valid for at least another minute
-                logger.debug("Using cached token")
-                self.access_token = cache.access_token
-                self.client.headers["authorization"] = f"bearer {self.access_token}"
-                if self._station_id is None:
-                    self._station_id = cache.station_id
-                return
+        if use_cache and self._try_login_from_cache():
+            return
 
         logger.info("Logging in to Sigen Cloud as %s", self.config.username)
         headers = self._get_ts_headers()
         headers["authorization"] = "Basic c2lnZW46c2lnZW4="
         headers["content-type"] = "application/x-www-form-urlencoded"
 
-        # Determine password to send
-        if self.config.password_encoded:
-            password_to_send = self.config.password_encoded
-        elif self.config.password:
-            password_to_send = self.encrypt_password(self.config.password)
-        else:
-            # Unreachable due to Config validation
-            msg = "Neither password nor password_encoded provided"
-            raise SigCloudError(msg)
-
-        data = {
-            "scope": "server",
-            "grant_type": "password",
-            "userDeviceId": str(int(time.time() * 1000)),
-            "username": self.config.username,
-            "password": password_to_send,
-        }
+        data = self._get_login_payload()
 
         response = await self.client.post(self._AUTH_URL, headers=headers, data=data)
 
