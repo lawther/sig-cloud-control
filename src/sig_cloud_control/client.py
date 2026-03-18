@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import logging
 import time
@@ -169,27 +170,29 @@ class SigCloudClient:
         if self._station_id is None:
             await self._fetch_station_id()
 
-        self._save_cache(login_response.expires_in_secs)
+        await self._save_cache(login_response.expires_in_secs)
         logger.info("Successfully logged in and cached token")
 
-    def _load_cache(self) -> TokenCache | None:
+    async def _load_cache(self) -> TokenCache | None:
         """Load the token from the cache file if it exists and is valid."""
-        if not self._CACHE_PATH.exists():
+        if not await asyncio.to_thread(self._CACHE_PATH.exists):
             return None
         try:
-            return TokenCache.model_validate_json(self._CACHE_PATH.read_text())
+            content = await asyncio.to_thread(self._CACHE_PATH.read_text)
+            return TokenCache.model_validate_json(content)
         except (ValidationError, Exception):
             return None
 
-    def _save_cache(self, expires_in: int) -> None:
+    async def _save_cache(self, expires_in: int) -> None:
         """Save the current token and station ID to the cache file."""
         cache = TokenCache(
             access_token=self.access_token,
             expires_at=time.time() + expires_in,
             station_id=self._station_id,
         )
-        self._CACHE_PATH.write_text(cache.model_dump_json())
-        self._CACHE_PATH.chmod(0o600)  # Ensure the file is not world-readable
+        content = cache.model_dump_json()
+        await asyncio.to_thread(self._CACHE_PATH.write_text, content)
+        await asyncio.to_thread(self._CACHE_PATH.chmod, 0o600)  # Ensure the file is not world-readable
 
     async def _fetch_station_id(self) -> None:
         """Fetch the station ID from the home info endpoint."""
