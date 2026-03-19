@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -41,9 +41,9 @@ async def test_login_success(client: SigCloudClient) -> None:
     }
 
     with (
-        patch.object(httpx.AsyncClient, "post", return_value=mock_response) as mock_post,
-        patch.object(SigCloudClient, "_save_cache"),
-        patch.object(SigCloudClient, "_load_cache", return_value=None),
+        patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=mock_response) as mock_post,
+        patch.object(SigCloudClient, "_save_cache", new_callable=AsyncMock),
+        patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=None),
     ):
         await client.login()
 
@@ -65,7 +65,7 @@ async def test_start_mode_calls_cancel_first(client: SigCloudClient) -> None:
     mock_response = MagicMock(spec=httpx.Response)
     mock_response.status_code = 200
 
-    with patch.object(httpx.AsyncClient, "put", return_value=mock_response) as mock_put:
+    with patch.object(httpx.AsyncClient, "put", new_callable=AsyncMock, return_value=mock_response) as mock_put:
         await client.charge_battery(60, power_kw=2.5)
 
         # Should have 2 PUT calls: one for cancel, one for charge
@@ -107,11 +107,11 @@ async def test_login_failure(client: SigCloudClient) -> None:
     mock_response.text = "Unauthorized"
 
     with (
-        patch.object(httpx.AsyncClient, "post", return_value=mock_response),
-        patch.object(SigCloudClient, "_load_cache", return_value=None),
+        patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=mock_response),
+        patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=None),
+        pytest.raises(SigCloudError, match="Login failed with status 401: Unauthorized"),
     ):
-        with pytest.raises(SigCloudError, match="Login failed with status 401: Unauthorized"):
-            await client.login()
+        await client.login()
 
 
 @pytest.mark.asyncio
@@ -123,8 +123,8 @@ async def test_login_invalid_json_payload(client: SigCloudClient) -> None:
     mock_response.text = "invalid_json_here"
 
     with (
-        patch.object(httpx.AsyncClient, "post", return_value=mock_response),
-        patch.object(SigCloudClient, "_load_cache", return_value=None),
+        patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=mock_response),
+        patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=None),
+        pytest.raises(SigCloudError, match="Unexpected error parsing login response"),
     ):
-        with pytest.raises(SigCloudError, match="Unexpected error parsing login response"):
-            await client.login()
+        await client.login()

@@ -86,9 +86,9 @@ class SigCloudClient:
             "sg-ts": str(int(time.time() * 1_000_000)),
         }
 
-    def _try_login_from_cache(self) -> bool:
+    async def _try_login_from_cache(self) -> bool:
         """Attempt to load credentials from the local cache. Returns True if successful."""
-        cache = self._load_cache()
+        cache = await self._load_cache()
         if cache and cache.expires_at > time.time() + 60:  # Valid for at least another minute
             logger.debug("Using cached token")
             self.access_token = cache.access_token
@@ -135,7 +135,7 @@ class SigCloudClient:
 
     async def login(self, use_cache: bool = True) -> None:
         """Authenticate with the Sigen API and store the access token. Checks cache first."""
-        if use_cache and self._try_login_from_cache():
+        if use_cache and await self._try_login_from_cache():
             return
 
         logger.info("Logging in to Sigen Cloud as %s", self.config.username)
