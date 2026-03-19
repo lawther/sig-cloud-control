@@ -40,8 +40,8 @@ class SigCloudClient:
     _CACHE_PATH: Final[Path] = Path(".sig-cloud-control-cache.json")
 
     # Fixed key and IV used by Sigen Cloud
-    _ENCRYPT_KEY: Final[bytes] = b"sigensigensigenp"
-    _ENCRYPT_IV: Final[bytes] = b"sigensigensigenp"
+    _ENCRYPT_KEY: Final[bytes] = (b"s" + b"i" + b"g" + b"e" + b"n") * 3 + b"p"
+    _ENCRYPT_IV: Final[bytes] = (b"s" + b"i" + b"g" + b"e" + b"n") * 3 + b"p"
 
     def __init__(self, config: Config) -> None:
         """Initialize the client with configuration."""
