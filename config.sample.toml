@@ -1,4 +1,7 @@
 # Sigen Cloud Control Configuration
+#
+# Quickstart: run `uv run sig-cloud-control setup` to create an encrypted config.
+#
 # Obtain your credentials from the Sigen Cloud dashboard.
 # username = Your Sigenergy username, e.g. "your_email@example.com"
 

@@ -89,12 +89,17 @@ class SigCloudClient:
     async def _try_login_from_cache(self) -> bool:
         """Attempt to load credentials from the local cache. Returns True if successful."""
         cache = await self._load_cache()
-        if cache and cache.expires_at > time.time() + 60:  # Valid for at least another minute
+        if not cache:
+            return False
+
+        # Recover station_id from cache if we don't have it yet
+        if self._station_id is None:
+            self._station_id = cache.station_id
+
+        if cache.expires_at > time.time() + 60:  # Valid for at least another minute
             logger.debug("Using cached token")
             self.access_token = cache.access_token
             self.client.headers["authorization"] = f"bearer {self.access_token}"
-            if self._station_id is None:
-                self._station_id = cache.station_id
             return True
         return False
 

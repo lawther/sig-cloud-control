@@ -16,6 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 cli = [
+    "tomli-w>=1.2.0",
     "typer~=0.24",
 ]
 

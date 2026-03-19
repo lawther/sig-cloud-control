@@ -16,7 +16,7 @@ This project uses `uv` for dependency management.
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/lawther/sig-cloud-control.git
 cd sig-cloud-control
 
 # Install dependencies
@@ -68,7 +68,7 @@ from sig_cloud_control.client import SigCloudClient
 from sig_cloud_control.models import Config
 
 async def main():
-    # Initialize config (password will be encrypted automatically)
+    # Initialize config (credentials will be encrypted and stored)
     config = Config(
         username="user@example.com",
         password="my_secret_password"

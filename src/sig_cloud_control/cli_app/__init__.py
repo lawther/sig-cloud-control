@@ -1,10 +1,10 @@
 import asyncio
-import json
 import logging
 import tomllib
 from pathlib import Path
 from typing import Annotated
 
+import tomli_w
 import typer
 from pydantic import ValidationError
 from rich.console import Console
@@ -32,23 +32,29 @@ def perform_setup(config_path: str) -> Config:
     typer.echo(f"Setting up new configuration at '{config_path}'...")
     username = typer.prompt("Sigen Cloud login name (eg. user@example.com)")
     password = typer.prompt("Sigen Cloud Password", hide_input=True)
+    station_id_str = typer.prompt("Station ID (optional, press Enter to skip)", default="")
 
     # Encrypt the password
     password_encoded = SigCloudClient.encrypt_password(password)
 
-    # Use json.dumps to safely escape strings for TOML basic strings.
-    # JSON escaping is compatible with TOML's required escapes for double-quoted strings.
-    config_content = f"username = {json.dumps(username)}\n"
-    config_content += f"password_encoded = {json.dumps(password_encoded)}\n"
+    station_id = int(station_id_str) if station_id_str.strip().isdigit() else None
 
-    with open(config_path, "w") as f:
-        f.write(config_content)
+    # Prepare data for TOML
+    config_data = {
+        "username": username,
+        "password_encoded": password_encoded,
+    }
+    if station_id:
+        config_data["station_id"] = station_id
+
+    with open(config_path, "wb") as f:
+        tomli_w.dump(config_data, f)
 
     typer.secho("✔︎  ", fg=typer.colors.GREEN, bold=True, nl=False)
     typer.secho(f"Success! Configuration saved to {config_path}", fg=typer.colors.GREEN)
     typer.echo("Note: Your password has been encrypted for storage.")
 
-    return Config(username=username, password_encoded=password_encoded)
+    return Config(username=username, password_encoded=password_encoded, station_id=station_id)
 
 
 def load_config(config_path: str) -> Config:
