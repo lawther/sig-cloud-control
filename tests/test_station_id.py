@@ -19,13 +19,10 @@ def config_no_station() -> Config:
 @pytest.mark.asyncio
 async def test_fetch_station_id_success(config_no_station: Config) -> None:
     client = SigCloudClient(config_no_station)
-    
+
     mock_response = MagicMock(spec=httpx.Response)
     mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "code": 0,
-        "data": {"stationId": 98765}
-    }
+    mock_response.json.return_value = {"code": 0, "data": {"stationId": 98765}}
 
     with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=mock_response) as mock_get:
         await client._fetch_station_id()
@@ -39,11 +36,7 @@ async def test_try_login_from_cache_recovers_station_id_even_if_expired(config_n
     assert client._station_id is None
 
     # Mock an expired cache that has a station_id
-    expired_cache = TokenCache(
-        access_token="expired_token",
-        expires_at=time.time() - 3600,
-        station_id=55555
-    )
+    expired_cache = TokenCache(access_token="expired_token", expires_at=time.time() - 3600, station_id=55555)
 
     with patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=expired_cache):
         # Should return False because token is expired
@@ -56,7 +49,7 @@ async def test_try_login_from_cache_recovers_station_id_even_if_expired(config_n
 @pytest.mark.asyncio
 async def test_login_skips_fetch_if_station_id_in_cache(config_no_station: Config) -> None:
     client = SigCloudClient(config_no_station)
-    
+
     # 1. First login (no cache)
     login_response = MagicMock(spec=httpx.Response)
     login_response.status_code = 200
@@ -65,14 +58,16 @@ async def test_login_skips_fetch_if_station_id_in_cache(config_no_station: Confi
         "token_type": "bearer",
         "expires_in": 3600,
     }
-    
+
     station_response = MagicMock(spec=httpx.Response)
     station_response.status_code = 200
     station_response.json.return_value = {"code": 0, "data": {"stationId": 11111}}
 
     with (
         patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=login_response),
-        patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=station_response) as mock_get_station,
+        patch.object(
+            httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=station_response
+        ) as mock_get_station,
         patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=None),
         patch.object(SigCloudClient, "_save_cache", new_callable=AsyncMock) as mock_save,
     ):
@@ -82,13 +77,13 @@ async def test_login_skips_fetch_if_station_id_in_cache(config_no_station: Confi
         mock_save.assert_called_once()
 
     # 2. Second login (expired cache with station_id)
-    client._station_id = None # Reset for test
+    client._station_id = None  # Reset for test
     expired_cache = TokenCache(
         access_token="token1",
-        expires_at=time.time() - 10, # Expired
-        station_id=11111
+        expires_at=time.time() - 10,  # Expired
+        station_id=11111,
     )
-    
+
     with (
         patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=login_response),
         patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get_station_2,
