@@ -180,12 +180,12 @@ class SigCloudClient:
 
     async def _load_cache(self) -> TokenCache | None:
         """Load the token from the cache file if it exists and is valid."""
-        if not await asyncio.to_thread(self._CACHE_PATH.exists):
-            return None
         try:
             content = await asyncio.to_thread(self._CACHE_PATH.read_text)
             return TokenCache.model_validate_json(content)
-        except (ValidationError, Exception):
+        except (FileNotFoundError, ValidationError):
+            return None
+        except Exception:
             return None
 
     async def _save_cache(self, expires_in: int) -> None:
