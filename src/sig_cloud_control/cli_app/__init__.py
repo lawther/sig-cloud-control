@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import tomllib
 from pathlib import Path
 from typing import Annotated
@@ -47,7 +48,9 @@ def perform_setup(config_path: str) -> Config:
     if station_id:
         config_data["station_id"] = station_id
 
-    with open(config_path, "wb") as f:
+    # Create the file with 0o600 permissions
+    fd = os.open(config_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "wb") as f:
         tomli_w.dump(config_data, f)
 
     typer.secho("✔︎  ", fg=typer.colors.GREEN, bold=True, nl=False)
