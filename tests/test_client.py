@@ -29,6 +29,21 @@ def test_encrypt_password() -> None:
 
 
 @pytest.mark.asyncio
+async def test_set_mode_station_id_unknown(client: SigCloudClient) -> None:
+    client.access_token = "fake_token"
+    client._station_id = None
+    with pytest.raises(SigCloudError, match=r"Station ID unknown. Login may have failed to retrieve it."):
+        await client.charge_battery(60)
+
+
+@pytest.mark.asyncio
+async def test_set_mode_not_logged_in(client: SigCloudClient) -> None:
+    client.access_token = None
+    with pytest.raises(SigCloudError, match=r"Not logged in. Call login\(\) first."):
+        await client.charge_battery(60)
+
+
+@pytest.mark.asyncio
 async def test_login_success(client: SigCloudClient) -> None:
     # Mock response for login
     # We use MagicMock for the response because json() and raise_for_status() are sync in httpx
