@@ -120,62 +120,76 @@ async def execute_action(
         await client.aclose()
 
 
+# Common types for CLI arguments and options to reduce duplication
+DurationArg = Annotated[int, typer.Argument(help="Duration in minutes (1-1440)", min=1, max=1440)]
+PowerOpt = Annotated[float | None, typer.Option(help="Power limitation in kW")]
+ConfigOpt = Annotated[str, typer.Option(help="Path to the TOML configuration file")]
+VerboseOpt = Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose logging")]
+
+
+def _run_command_action(
+    action: str,
+    duration: int = 0,
+    power: float | None = None,
+    config: str = "config.toml",
+    verbose: bool = False,
+) -> None:
+    """Internal helper to load config and run an action."""
+    conf = load_config(config)
+    asyncio.run(execute_action(conf, action, duration, power, verbose))
+
+
 @app.command()
 def charge(
-    duration: Annotated[int, typer.Argument(help="Duration in minutes (1-1440)", min=1, max=1440)],
-    power: Annotated[float | None, typer.Option(help="Power limitation in kW")] = None,
-    config: Annotated[str, typer.Option(help="Path to the TOML configuration file")] = "config.toml",
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose logging")] = False,
+    duration: DurationArg,
+    power: PowerOpt = None,
+    config: ConfigOpt = "config.toml",
+    verbose: VerboseOpt = False,
 ) -> None:
     """Charge battery for a specified duration."""
-    conf = load_config(config)
-    asyncio.run(execute_action(conf, "charge", duration, power, verbose))
+    _run_command_action("charge", duration, power, config, verbose)
 
 
 @app.command()
 def discharge(
-    duration: Annotated[int, typer.Argument(help="Duration in minutes (1-1440)", min=1, max=1440)],
-    power: Annotated[float | None, typer.Option(help="Power limitation in kW")] = None,
-    config: Annotated[str, typer.Option(help="Path to the TOML configuration file")] = "config.toml",
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose logging")] = False,
+    duration: DurationArg,
+    power: PowerOpt = None,
+    config: ConfigOpt = "config.toml",
+    verbose: VerboseOpt = False,
 ) -> None:
     """Discharge battery for a specified duration."""
-    conf = load_config(config)
-    asyncio.run(execute_action(conf, "discharge", duration, power, verbose))
+    _run_command_action("discharge", duration, power, config, verbose)
 
 
 @app.command()
 def hold(
-    duration: Annotated[int, typer.Argument(help="Duration in minutes (1-1440)", min=1, max=1440)],
-    power: Annotated[float | None, typer.Option(help="Power limitation in kW")] = None,
-    config: Annotated[str, typer.Option(help="Path to the TOML configuration file")] = "config.toml",
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose logging")] = False,
+    duration: DurationArg,
+    power: PowerOpt = None,
+    config: ConfigOpt = "config.toml",
+    verbose: VerboseOpt = False,
 ) -> None:
     """Hold battery for a specified duration."""
-    conf = load_config(config)
-    asyncio.run(execute_action(conf, "hold", duration, power, verbose))
+    _run_command_action("hold", duration, power, config, verbose)
 
 
 @app.command(name="self-consumption")
 def self_consumption(
-    duration: Annotated[int, typer.Argument(help="Duration in minutes (1-1440)", min=1, max=1440)],
-    power: Annotated[float | None, typer.Option(help="Power limitation in kW")] = None,
-    config: Annotated[str, typer.Option(help="Path to the TOML configuration file")] = "config.toml",
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose logging")] = False,
+    duration: DurationArg,
+    power: PowerOpt = None,
+    config: ConfigOpt = "config.toml",
+    verbose: VerboseOpt = False,
 ) -> None:
     """Enable self-consumption mode for a specified duration."""
-    conf = load_config(config)
-    asyncio.run(execute_action(conf, "self-consumption", duration, power, verbose))
+    _run_command_action("self-consumption", duration, power, config, verbose)
 
 
 @app.command()
 def cancel(
-    config: Annotated[str, typer.Option(help="Path to the TOML configuration file")] = "config.toml",
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose logging")] = False,
+    config: ConfigOpt = "config.toml",
+    verbose: VerboseOpt = False,
 ) -> None:
     """Cancel any active manual control."""
-    conf = load_config(config)
-    asyncio.run(execute_action(conf, "cancel", verbose=verbose))
+    _run_command_action(action="cancel", config=config, verbose=verbose)
 
 
 @app.command()
