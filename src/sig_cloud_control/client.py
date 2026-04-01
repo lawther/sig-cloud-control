@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import logging
+import os
 import time
 from http import HTTPStatus
 from pathlib import Path
@@ -188,6 +189,12 @@ class SigCloudClient:
         except Exception:
             return None
 
+    def _write_cache_file(self, content: str) -> None:
+        """Helper to write the cache file securely with restricted permissions."""
+        fd = os.open(self._CACHE_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+
     async def _save_cache(self, expires_in: int) -> None:
         """Save the current token and station ID to the cache file."""
         cache = TokenCache(
@@ -196,8 +203,7 @@ class SigCloudClient:
             station_id=self._station_id,
         )
         content = cache.model_dump_json()
-        await asyncio.to_thread(self._CACHE_PATH.write_text, content)
-        await asyncio.to_thread(self._CACHE_PATH.chmod, 0o600)  # Ensure the file is not world-readable
+        await asyncio.to_thread(self._write_cache_file, content)
 
     async def _fetch_station_id(self) -> None:
         """Fetch the station ID from the home info endpoint."""
