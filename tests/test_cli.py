@@ -12,6 +12,9 @@ from sig_cloud_control.cli_app import app  # noqa: E402
 
 runner = CliRunner()
 
+MOCK_DURATION = 30
+MOCK_POWER = 5.0
+
 
 def test_charge_command() -> None:
     with (
@@ -20,7 +23,7 @@ def test_charge_command() -> None:
     ):
         mock_load.return_value = MagicMock()
 
-        result = runner.invoke(app, ["charge", "30", "--power", "5.0"])
+        result = runner.invoke(app, ["charge", str(MOCK_DURATION), "--power", str(MOCK_POWER)])
 
         assert result.exit_code == 0
         mock_load.assert_called_once_with("config.toml")
@@ -29,6 +32,6 @@ def test_charge_command() -> None:
         args, _ = mock_execute.call_args
         # execute_action(config, action, duration, power, verbose)
         assert args[1] == "charge"
-        assert args[2] == 30
-        assert args[3] == 5.0
+        assert args[2] == MOCK_DURATION
+        assert args[3] == MOCK_POWER
         assert args[4] is False  # verbose default

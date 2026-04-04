@@ -16,7 +16,12 @@ test:
     uv run pytest
 
 # Run linting and tests (pre-commit check)
-precommit: lint test
+precommit:
+    @echo "Running pre-commit checks..."
+    @uv run ruff check --fix . > /dev/null 2>&1 || (uv run ruff check --fix . && exit 1)
+    @uv run ruff format . > /dev/null 2>&1 || (uv run ruff format . && exit 1)
+    @uv run pytest > /dev/null 2>&1 || (uv run pytest && exit 1)
+    @echo "✔︎  Pre-commit checks passed!"
 
 # Interactively setup credentials
 setup:
