@@ -5,7 +5,7 @@ default:
 # Sync project dependencies
 sync:
     uv sync
-    @just install-hook
+    @just setup-git-hooks
 
 # Run linter and formatter
 lint:
@@ -16,12 +16,15 @@ lint:
 test:
     uv run pytest
 
-# Install the git pre-commit hook
-install-hook:
+# Setup local git hooks
+setup-git-hooks:
+    @echo "Setting up local git hooks..."
     @echo "#!/bin/sh" > .git/hooks/pre-commit
+    @echo "# This hook invokes the Justfile, which is the Single Source Of Truth for precommit logic." >> .git/hooks/pre-commit
+    @echo "# DO NOT add precommit logic here; add it to the 'precommit' recipe in the Justfile." >> .git/hooks/pre-commit
     @echo "just precommit" >> .git/hooks/pre-commit
     @chmod +x .git/hooks/pre-commit
-    @echo "✔︎  Git pre-commit hook installed!"
+    @echo "✅ Git hooks set up!"
 
 # Run linting and tests (pre-commit check)
 # This Justfile is the Single Source Of Truth (SSOT) for all pre-commit checks.

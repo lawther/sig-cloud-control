@@ -2,28 +2,28 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  precommit:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
 
-      - name: Set up Python
-        run: uv python install
+      - uses: extractions/setup-just@v2
 
-      - name: Install just
-        uses: extractions/setup-just@v2
+      - name: Install dependencies
+        run: uv sync
 
-      # The Justfile is the Single Source Of Truth (SSOT) for all pre-commit checks.
-      # No additional linting or testing logic should be added here.
-      - name: Run pre-commit checks
+      # Pre-commit logic is defined in the Justfile `precommit` target — do not add steps here.
+      - name: Validate project
         run: just precommit
