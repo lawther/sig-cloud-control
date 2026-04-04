@@ -18,13 +18,13 @@
 
 # Running Tests
 
-- Use `uv run pytest` to run tests.
+- The `Justfile` is the Single Source Of Truth (SSOT) for all testing and linting logic. No additional logic should be added anywhere else (e.g. CI configs).
+- Use `just test` to run tests.
 - Always use `AsyncMock` (not `MagicMock`) when mocking an `async def` function or callback. `MagicMock` silently swallows async/sync mismatches, giving false green tests.
 
 # Committing Code
 
-- You must never commit code without ensuring the ruff checks above pass, and the code passes all the tests. 
-- Using judgement, you should also smoke test the application, by running `uv run -m app`, looking at the logfile, and ensuring that the /healthz endpoint returns a 200 and the text "OK". For example `curl -s http://localhost:4290/healthz`
+- You must never commit code without ensuring the `just precommit` checks pass. 
 - You must always use `git add` to stage files before committing. You should never use `git commit -a`.
 
 

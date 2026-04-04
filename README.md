@@ -95,17 +95,30 @@ if __name__ == "__main__":
 
 ## Development
 
+This project uses `just` to manage development tasks. The `Justfile` is the Single Source Of Truth (SSOT) for all pre-commit checks and development workflows. No additional linting or testing logic should be added anywhere else (e.g. CI configs).
+
+### Help
+
+```bash
+just
+```
+
+### Running Pre-commit Checks (Lint + Test)
+
+```bash
+just precommit
+```
+
 ### Running Tests
 
 ```bash
-uv run pytest
+just test
 ```
 
 ### Linting and Formatting
 
 ```bash
-uv run ruff check --fix
-uv run ruff format
+just lint
 ```
 
 ## License
