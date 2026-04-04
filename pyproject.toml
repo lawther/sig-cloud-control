@@ -52,6 +52,7 @@ line-length = 120
 # ASYNC: Async code checks
 # SIM: Simple checks
 # LOG: Logging checks
+# S: Bandit checks
 
 [tool.ruff.lint]
 select = [
@@ -61,6 +62,7 @@ select = [
   "E",
   "F",
   "I",
+  "S",
   "ICN",
   "PGH",
   "PL",
@@ -93,6 +95,14 @@ ignore = [
   "PLR0913",
   "PLR0915",
 ]
+per-file-ignores = { "tests/*" = [
+  # S101: Use of assert (Standard in tests)
+  "S101",
+  # S105: Hardcoded password strings (Allowed in tests for dummy data)
+  "S105",
+  # S106: Hardcoded password in function arguments (Allowed in tests for dummy data)
+  "S106",
+] }
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
