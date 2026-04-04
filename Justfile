@@ -38,9 +38,16 @@ setup-git-hooks:
 precommit:
     @echo "Running pre-commit checks..."
     @uv lock --check || { echo "❌ uv.lock is out of sync with pyproject.toml"; exit 1; }
-    @uv run ruff check --fix . > /dev/null 2>&1 || (uv run ruff check --fix . && exit 1)
-    @uv run ruff format . > /dev/null 2>&1 || (uv run ruff format . && exit 1)
-    @uv run pytest > /dev/null 2>&1 || (uv run pytest && exit 1)
+    @tmpfile=$(mktemp); \
+    trap 'rm -f "$$tmpfile"' EXIT; \
+    if ! ( \
+        uv run ruff check --fix . && \
+        uv run ruff format . && \
+        uv run pytest \
+    ) > "$$tmpfile" 2>&1; then \
+        cat "$$tmpfile"; \
+        exit 1; \
+    fi
     @echo "✔︎  Pre-commit checks passed!"
 
 # Interactively setup credentials
