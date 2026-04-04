@@ -16,6 +16,12 @@ lint:
 test:
     uv run pytest
 
+# Setup the development environment from a fresh clone
+setup-dev:
+    @uv sync
+    @just setup-git-hooks
+    @echo "✅ Development environment setup complete!"
+
 # Setup local git hooks
 setup-git-hooks:
     @echo "Setting up local git hooks..."
@@ -31,6 +37,7 @@ setup-git-hooks:
 # No additional linting or testing logic should be added anywhere else (e.g. CI configs).
 precommit:
     @echo "Running pre-commit checks..."
+    @uv lock --check || { echo "❌ uv.lock is out of sync with pyproject.toml"; exit 1; }
     @uv run ruff check --fix . > /dev/null 2>&1 || (uv run ruff check --fix . && exit 1)
     @uv run ruff format . > /dev/null 2>&1 || (uv run ruff format . && exit 1)
     @uv run pytest > /dev/null 2>&1 || (uv run pytest && exit 1)
