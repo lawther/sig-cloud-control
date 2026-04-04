@@ -144,6 +144,7 @@ async def test_login_invalid_json_payload(client: SigCloudClient) -> None:
     ):
         await client.login()
 
+
 def test_get_login_payload_no_password() -> None:
     # Use model_construct to bypass Pydantic validation
     config = Config.model_construct(username="test@example.com")
