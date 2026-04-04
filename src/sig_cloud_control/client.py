@@ -43,6 +43,10 @@ class SigCloudClient:
     # Fixed key and IV used by Sigen Cloud
     _ENCRYPT_KEY: Final[bytes] = (b"s" + b"i" + b"g" + b"e" + b"n") * 3 + b"p"
     _ENCRYPT_IV: Final[bytes] = (b"s" + b"i" + b"g" + b"e" + b"n") * 3 + b"p"
+    _CIPHER: Final[Cipher] = Cipher(
+        algorithms.AES(_ENCRYPT_KEY),
+        modes.CBC(_ENCRYPT_IV),
+    )
 
     def __init__(self, config: Config) -> None:
         """Initialize the client with configuration."""
@@ -130,11 +134,7 @@ class SigCloudClient:
         padder = padding.PKCS7(128).padder()
         padded_data = padder.update(password.encode()) + padder.finalize()
 
-        cipher = Cipher(
-            algorithms.AES(SigCloudClient._ENCRYPT_KEY),
-            modes.CBC(SigCloudClient._ENCRYPT_IV),
-        )
-        encryptor = cipher.encryptor()
+        encryptor = SigCloudClient._CIPHER.encryptor()
         ct = encryptor.update(padded_data) + encryptor.finalize()
 
         return base64.b64encode(ct).decode()
