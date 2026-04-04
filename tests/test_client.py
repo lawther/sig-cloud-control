@@ -143,3 +143,10 @@ async def test_login_invalid_json_payload(client: SigCloudClient) -> None:
         pytest.raises(SigCloudError, match="Unexpected error parsing login response"),
     ):
         await client.login()
+
+def test_get_login_payload_no_password() -> None:
+    # Use model_construct to bypass Pydantic validation
+    config = Config.model_construct(username="test@example.com")
+    client = SigCloudClient(config)
+    with pytest.raises(SigCloudError, match="Neither password nor password_encoded provided"):
+        client._get_login_payload()
