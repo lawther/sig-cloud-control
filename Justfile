@@ -41,8 +41,9 @@ precommit:
     @tmpfile=$(mktemp); \
     trap 'rm -f "$$tmpfile"' EXIT; \
     if ! ( \
-        uv run ruff check --fix . && \
-        uv run ruff format . && \
+        set -e; \
+        uv run ruff check --fix .; \
+        uv run ruff format .; \
         uv run pytest \
     ) > "$$tmpfile" 2>&1; then \
         cat "$$tmpfile"; \
