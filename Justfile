@@ -36,20 +36,39 @@ setup-git-hooks:
 # This Justfile is the Single Source Of Truth (SSOT) for all pre-commit checks.
 # No additional linting or testing logic should be added anywhere else (e.g. CI configs).
 precommit:
-    @echo "Running pre-commit checks..."
-    @uv lock --check || { echo "❌ uv.lock is out of sync with pyproject.toml"; exit 1; }
-    @tmpfile=$(mktemp); \
-    trap 'rm -f "$$tmpfile"' EXIT; \
-    if ! ( \
-        grep -E "^[[:space:]]+#!.*" -A 10 Justfile | grep "&&" && { echo "❌ Shebang recipes must not use && chains. Use separate lines for reliable error reporting."; exit 1; } || true; \
-        uv run ruff check --fix . && \
-        uv run ruff format . && \
-        uv run pytest \
-    ) > "$$tmpfile" 2>&1; then \
-        cat "$$tmpfile"; \
-        exit 1; \
+    #!/usr/bin/env bash
+    echo "Running pre-commit checks..."
+    uv lock --check || { echo "❌ uv.lock is out of sync with pyproject.toml"; exit 1; }
+    tmpfile=$(mktemp)
+    trap 'rm -f "$tmpfile"' EXIT
+    (
+        set -e
+        just _lint-justfile
+        uv run ruff check --fix .
+        uv run ruff format .
+        uv run pytest
+    ) > "$tmpfile" 2>&1
+    status=$?
+    if [ $status -ne 0 ]; then
+        cat "$tmpfile"
+        exit $status
     fi
-    @echo "✔︎  Pre-commit checks passed!"
+    echo "✔︎  Pre-commit checks passed!"
+
+# [private] Ensure Justfile recipes don't use && chains (which suppress set -e)
+_lint-justfile:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    violations=$(awk '
+        /^[[:space:]]+#!/ { in_shebang = 1 }
+        /^[^[:space:]]/ && NF > 0 { in_shebang = 0 }
+        !in_shebang && /&&/ && !/^[[:space:]]*#/ { print NR": "$0 }
+    ' Justfile)
+    if [[ -n "$violations" ]]; then
+        echo "❌ Justfile recipes must not use && chains. Use separate lines for reliable error reporting."
+        echo "$violations"
+        exit 1
+    fi
 
 # Interactively setup credentials
 setup:
