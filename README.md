@@ -2,15 +2,15 @@
 
 A Python library and CLI for controlling Sigenergy (Sigen Cloud) solar and battery systems.
 
-> [!CAUTION]
-> **Non-Affiliation & Health Warning**
-> - **Not Official:** This project is not affiliated with, authorized by, or endorsed by Sigenergy Technology Co., Ltd. Use of this tool is at your own risk.
+> [⚠️ CAUTION]
+> **Non-Affiliation & Warning**
+> - **Not Official:** This project is not affiliated with, authorized by, or endorsed by Sigenergy. Use of this tool is at your own risk.
 > - **Warranty Warning:** Using this tool may violate your Sigenergy Terms of Service and could potentially void your hardware warranty. The author is not responsible for any loss of warranty or damage to equipment.
 > - **Reverse Engineering:** This tool was developed for the purpose of interoperability between Sigenergy batteries and third-party automation systems.
 
 ## Compatibility
 
-> [!NOTE]
+> [⚠️ NOTE]
 > This tool currently only supports the **Australian** Sigen Cloud data centre (`api-aus.sigencloud.com`). Other regions are not yet supported.
 
 ## Operations

@@ -2,8 +2,7 @@
 
 - All code must be type-hinted.
 - All code must pass the project's linting rules.
-  - Use `uv run ruff check --fix` to check and fix the code.
-  - Use `uv run ruff format` to format the code.
+  - Use `just precommit` to lint, fix, format and type check the code.
 - Any data loaded from a file or external source (e.g. YAML, TOML, JSON, HTTP) must be validated against a Pydantic model. Never trust outside data.
 - Data that is wholly internal to the application should be represented using standard Python classes or dataclasses. Pydantic validation is not necessary.
 - Use Enums whereever possible. Do not create/pass around 'magic' strings or integers when there is a fixed set of values.
@@ -26,7 +25,6 @@
 
 - You must never commit code without ensuring the `just precommit` checks pass. 
 - You must always use `git add` to stage files before committing. You should never use `git commit -a`.
-
 
 # Time and Date
 
