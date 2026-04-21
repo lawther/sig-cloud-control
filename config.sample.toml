@@ -1,6 +1,6 @@
 # Sigen Cloud Control Configuration
 #
-# Quickstart: run `uv run sig-cloud-control setup` to create an encrypted config.
+# Quickstart: run `sig-cloud-control setup` to create an encrypted config.
 #
 # Obtain your credentials from the Sigen Cloud dashboard.
 # username = Your Sigenergy username, e.g. "your_email@example.com"
@@ -10,8 +10,9 @@ username = "your_email@example.com"
 # Provide either your plaintext password:
 password = "your_password"
 
-# OR your encoded password (use 'uv run main.py setup' to generate this):
+# OR your encoded password (use 'sig-cloud-control setup' to generate this):
 # password_encoded = "..."
 
 # station_id is optional. If omitted, the library will fetch it automatically.
+# Find it in the Sigen app under Settings -> System Settings -> About.
 # station_id = 123456789

@@ -11,6 +11,7 @@ from uuid import uuid4
 import httpx
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from platformdirs import user_cache_path
 from pydantic import ValidationError
 
 from .models import (
@@ -24,16 +25,29 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_CACHE_PATH: Final[Path] = user_cache_path("sig-cloud-control") / "token-cache.json"
+
 
 class SigCloudError(Exception):
     """Base exception for SigCloudClient."""
 
-    pass
+
+class AuthenticationError(SigCloudError):
+    """Raised when login fails (bad credentials or token error)."""
+
+
+class StationError(SigCloudError):
+    """Raised when the station ID cannot be resolved or is unknown."""
+
+
+class APIError(SigCloudError):
+    """Raised when the Sigen API returns an unexpected or unparseable response."""
 
 
 class SigCloudClient:
     """Client for interacting with Sigen Cloud API."""
 
+    # TODO: Support additional regions (currently only Australian data centre)
     _BASE_URL: Final[str] = "https://api-aus.sigencloud.com"
     _AUTH_URL: Final[str] = f"{_BASE_URL}/auth/oauth/token"
     _MANUAL_MODE_URL: Final[str] = f"{_BASE_URL}/device/energy-profile/instant/manunal"
@@ -47,7 +61,7 @@ class SigCloudClient:
         modes.CBC(_ENCRYPT_IV),
     )
 
-    def __init__(self, config: Config, cache_path: Path | None = Path(".sig-cloud-control-cache.json")) -> None:
+    def __init__(self, config: Config, cache_path: Path | None = _DEFAULT_CACHE_PATH) -> None:
         """Initialize the client with configuration."""
         self.config = config
         self.cache_path = cache_path
@@ -85,6 +99,14 @@ class SigCloudClient:
             }
         )
 
+    async def __aenter__(self) -> "SigCloudClient":
+        """Enter the async context manager."""
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        """Exit the async context manager and close the HTTP client."""
+        await self.aclose()
+
     def _get_ts_headers(self) -> dict[str, str]:
         return {
             "sg-log-id": str(uuid4()),
@@ -113,7 +135,6 @@ class SigCloudClient:
 
     def _get_login_payload(self) -> dict[str, str]:
         """Prepare the payload for the login request."""
-        # Determine password to send
         if self.config.password_encoded:
             password_to_send = self.config.password_encoded
         elif self.config.password:
@@ -158,7 +179,7 @@ class SigCloudClient:
 
         if response.status_code != HTTPStatus.OK:
             logger.error("Login failed with status %s: %s", response.status_code, response.text)
-            raise SigCloudError(f"Login failed with status {response.status_code}: {response.text}")
+            raise AuthenticationError(f"Login failed with status {response.status_code}: {response.text}")
 
         try:
             payload = response.json()
@@ -167,10 +188,10 @@ class SigCloudClient:
             login_response = LoginResponse.model_validate(token_data)
         except ValidationError as e:
             logger.error("Failed to parse login response: %s", response.text)
-            raise SigCloudError(f"Failed to parse login response. Raw payload: {response.text}. Error: {e}") from e
+            raise APIError(f"Failed to parse login response. Raw payload: {response.text}. Error: {e}") from e
         except Exception as e:
             logger.error("Unexpected error parsing login response: %s", response.text)
-            raise SigCloudError(f"Unexpected error parsing login response: {e}. Raw payload: {response.text}") from e
+            raise APIError(f"Unexpected error parsing login response: {e}. Raw payload: {response.text}") from e
 
         self.access_token = login_response.access_token
         self.client.headers["authorization"] = f"bearer {self.access_token}"
@@ -198,6 +219,7 @@ class SigCloudClient:
         """Helper to write the cache file securely with restricted permissions."""
         if self.cache_path is None:
             return
+        self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(self.cache_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(content)
@@ -227,7 +249,7 @@ class SigCloudClient:
 
         if self._station_id is None:
             logger.error("Could not retrieve station ID. Response: %s", response.text)
-            raise SigCloudError("Could not retrieve station ID from Sigen Cloud.")
+            raise StationError("Could not retrieve station ID from Sigen Cloud.")
         logger.debug("Fetched station ID: %s", self._station_id)
 
     async def _set_mode_raw(
@@ -241,7 +263,7 @@ class SigCloudClient:
             raise SigCloudError("Not logged in. Call login() first.")
 
         if self._station_id is None:
-            raise SigCloudError("Station ID unknown. Login may have failed to retrieve it.")
+            raise StationError("Station ID unknown. Login may have failed to retrieve it.")
 
         request_data = SetModeRequest(
             station_id=self._station_id,
@@ -289,13 +311,13 @@ class SigCloudClient:
         """Force discharge the battery."""
         await self._start_mode(OperationMode.DISCHARGE, duration_min, power_kw)
 
-    async def hold_battery(self, duration_min: int, power_kw: float | None = None) -> None:
+    async def hold_battery(self, duration_min: int) -> None:
         """Hold the battery at its current SOC."""
-        await self._start_mode(OperationMode.HOLD, duration_min, power_kw)
+        await self._start_mode(OperationMode.HOLD, duration_min)
 
-    async def self_consumption(self, duration_min: int, power_kw: float | None = None) -> None:
+    async def self_consumption(self, duration_min: int) -> None:
         """Set to self-consumption mode."""
-        await self._start_mode(OperationMode.SELF_CONSUMPTION, duration_min, power_kw)
+        await self._start_mode(OperationMode.SELF_CONSUMPTION, duration_min)
 
     async def cancel_self_control(self) -> None:
         """Stop any active manual control."""

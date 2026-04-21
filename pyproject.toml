@@ -28,6 +28,7 @@ classifiers = [
 dependencies = [
     "cryptography~=46.0",
     "httpx~=0.28",
+    "platformdirs>=4.0",
     "pydantic-settings>=2.14.0",
     "pydantic[email]~=2.12",
 ]
