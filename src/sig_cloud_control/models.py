@@ -11,14 +11,19 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PASSWORD_LEN_BYTES: Final[int] = 16
 MAX_DURATION_MINS: Final[int] = 1440
 MAX_POWER_LIMIT_KW: Final[float] = 100.0
 
 
-class Config(BaseModel):
-    model_config = ConfigDict(strict=True)
+class Config(BaseSettings):
+    model_config = SettingsConfigDict(
+        strict=True,
+        env_prefix="SIGEN_",
+        case_sensitive=False,
+    )
 
     username: EmailStr
     """The user's Sigen Cloud email address."""

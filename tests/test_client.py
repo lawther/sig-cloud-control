@@ -145,6 +145,20 @@ async def test_login_invalid_json_payload(client: SigCloudClient) -> None:
         await client.login()
 
 
+@pytest.mark.asyncio
+async def test_cache_disabled(config: Config) -> None:
+    client = SigCloudClient(config, cache_path=None)
+    assert client.cache_path is None
+
+    with patch.object(SigCloudClient, "_load_cache", wraps=client._load_cache) as mock_load:
+        assert await client._try_login_from_cache() is False
+        mock_load.assert_not_called()
+
+    with patch.object(SigCloudClient, "_write_cache_file", wraps=client._write_cache_file) as mock_write:
+        await client._save_cache(3600)
+        mock_write.assert_not_called()
+
+
 def test_get_login_payload_no_password() -> None:
     # Use model_construct to bypass Pydantic validation
     config = Config.model_construct(username="test@example.com")

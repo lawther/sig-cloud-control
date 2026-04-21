@@ -8,11 +8,34 @@ version = "0.1.0"
 description = "Control Sigenergy battery via Sigen Cloud"
 readme = "README.md"
 requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [
+    { name = "Mike Lawther", email = "mike.lawther@gmail.com" },
+]
+keywords = ["sigenergy", "sigen", "battery", "solar", "energy-storage", "iot"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Home Automation",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "cryptography~=46.0",
     "httpx~=0.28",
+    "pydantic-settings>=2.14.0",
     "pydantic[email]~=2.12",
 ]
+
+[project.urls]
+Homepage = "https://github.com/lawther/sig-cloud-control"
+Repository = "https://github.com/lawther/sig-cloud-control"
+Issues = "https://github.com/lawther/sig-cloud-control/issues"
 
 [project.optional-dependencies]
 cli = [

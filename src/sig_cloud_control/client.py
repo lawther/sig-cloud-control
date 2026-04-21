@@ -38,7 +38,6 @@ class SigCloudClient:
     _AUTH_URL: Final[str] = f"{_BASE_URL}/auth/oauth/token"
     _MANUAL_MODE_URL: Final[str] = f"{_BASE_URL}/device/energy-profile/instant/manunal"
     _STATION_INFO_URL: Final[str] = f"{_BASE_URL}/device/owner/station/home"
-    _CACHE_PATH: Final[Path] = Path(".sig-cloud-control-cache.json")
 
     # Fixed key and IV used by Sigen Cloud
     _ENCRYPT_KEY: Final[bytes] = (b"s" + b"i" + b"g" + b"e" + b"n") * 3 + b"p"
@@ -48,9 +47,10 @@ class SigCloudClient:
         modes.CBC(_ENCRYPT_IV),
     )
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: Config, cache_path: Path | None = Path(".sig-cloud-control-cache.json")) -> None:
         """Initialize the client with configuration."""
         self.config = config
+        self.cache_path = cache_path
         self.client = httpx.AsyncClient()
         self.access_token: str | None = None
         self._station_id: int | None = config.station_id
@@ -93,6 +93,9 @@ class SigCloudClient:
 
     async def _try_login_from_cache(self) -> bool:
         """Attempt to load credentials from the local cache. Returns True if successful."""
+        if self.cache_path is None:
+            return False
+
         cache = await self._load_cache()
         if not cache:
             return False
@@ -181,8 +184,10 @@ class SigCloudClient:
 
     async def _load_cache(self) -> TokenCache | None:
         """Load the token from the cache file if it exists and is valid."""
+        if self.cache_path is None:
+            return None
         try:
-            content = await asyncio.to_thread(self._CACHE_PATH.read_text)
+            content = await asyncio.to_thread(self.cache_path.read_text)
             return TokenCache.model_validate_json(content)
         except (FileNotFoundError, ValidationError):
             return None
@@ -191,12 +196,16 @@ class SigCloudClient:
 
     def _write_cache_file(self, content: str) -> None:
         """Helper to write the cache file securely with restricted permissions."""
-        fd = os.open(self._CACHE_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        if self.cache_path is None:
+            return
+        fd = os.open(self.cache_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(content)
 
     async def _save_cache(self, expires_in: int) -> None:
         """Save the current token and station ID to the cache file."""
+        if self.cache_path is None:
+            return
         cache = TokenCache(
             access_token=self.access_token,
             expires_at=time.time() + expires_in,

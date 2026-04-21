@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import sys
 import tomllib
 from pathlib import Path
 from typing import Annotated
@@ -15,7 +16,6 @@ from sig_cloud_control.models import Config
 
 app = typer.Typer(help="Control a Sigen solar/battery station.")
 
-LOG_FILE = "sig-cloud-control.log"
 console = Console()
 
 
@@ -61,8 +61,24 @@ def perform_setup(config_path: str) -> Config:
 
 
 def load_config(config_path: str) -> Config:
-    """Load configuration from file, or perform setup if missing."""
+    """Load configuration from environment variables and/or TOML file.
+
+    Precedence:
+    1. SIGEN_* Environment Variables
+    2. --config / local TOML file
+    3. Interactive setup (if both are missing)
+    """
     typer.echo("Loading configuration...")
+
+    # Load from environment variables first
+    try:
+        # Config() automatically loads from os.environ due to BaseSettings inheritance
+        # If it returns a valid config, then environment variables have everything we need.
+        return Config()
+    except ValidationError:
+        # Not enough in env vars, we'll try to supplement with the file
+        pass
+
     path = Path(config_path)
     if not path.exists():
         typer.secho(f"⚠️  Config file not found at '{config_path}'", fg=typer.colors.YELLOW)
@@ -70,8 +86,23 @@ def load_config(config_path: str) -> Config:
 
     try:
         with open(config_path, "rb") as f:
-            config_data = tomllib.load(f)
-        return Config.model_validate(config_data)
+            file_data = tomllib.load(f)
+
+        # Get what we have from environment variables (even if it's incomplete)
+        env_vars = {
+            "username": os.environ.get("SIGEN_USERNAME"),
+            "password": os.environ.get("SIGEN_PASSWORD"),
+            "password_encoded": os.environ.get("SIGEN_PASSWORD_ENCODED"),
+            "station_id": os.environ.get("SIGEN_STATION_ID"),
+        }
+        # Filter out None values and convert types
+        env_vars = {k: v for k, v in env_vars.items() if v is not None}
+        if "station_id" in env_vars and isinstance(env_vars["station_id"], str) and env_vars["station_id"].isdigit():
+            env_vars["station_id"] = int(env_vars["station_id"])
+
+        # Merge: Environment Variables OVER file data
+        merged_data = {**file_data, **env_vars}
+        return Config.model_validate(merged_data)
     except ValidationError as e:
         typer.secho(
             f"❌ Error: Invalid configuration format in '{config_path}':\n{e}",
@@ -89,13 +120,12 @@ async def execute_action(
     verbose: bool = False,
 ) -> None:
     """Internal helper to run the async client logic."""
-    log_level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=log_level,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        filename=LOG_FILE,
-        filemode="a",
-    )
+    if verbose:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            stream=sys.stderr,
+        )
 
     client = SigCloudClient(config)
     try:
