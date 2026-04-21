@@ -11,6 +11,7 @@ sync:
 lint:
     uv run ruff check --fix .
     uv run ruff format .
+    uv run ty check
 
 # Run tests
 test:
@@ -44,10 +45,8 @@ precommit:
     (
         set -e
         just _lint-justfile
-        uv run ruff check --fix .
-        uv run ruff format .
-        uv run ty check
-        uv run pytest
+        just lint
+        just test
     ) > "$tmpfile" 2>&1
     status=$?
     if [ $status -ne 0 ]; then
