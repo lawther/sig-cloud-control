@@ -226,7 +226,7 @@ class SigCloudClient:
 
     async def _save_cache(self, expires_in: int) -> None:
         """Save the current token and station ID to the cache file."""
-        if self.cache_path is None:
+        if self.cache_path is None or self.access_token is None:
             return
         cache = TokenCache(
             access_token=self.access_token,

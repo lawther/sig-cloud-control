@@ -95,9 +95,11 @@ class SetModeRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     mode: OperationMode
-    station_id: int = Field(alias="stationId", gt=0)
+    station_id: int = Field(validation_alias="stationId", serialization_alias="stationId", gt=0)
     duration: int | None = None
-    power_limitation: float | None = Field(default=None, alias="powerLimitation")
+    power_limitation: float | None = Field(
+        default=None, validation_alias="powerLimitation", serialization_alias="powerLimitation"
+    )
     enable: bool = False
 
     @field_serializer("duration", "power_limitation")

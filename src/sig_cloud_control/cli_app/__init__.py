@@ -83,9 +83,9 @@ def load_config(config_path: Path) -> Config:
 
     # Load from environment variables first
     try:
-        # Config() automatically loads from os.environ due to BaseSettings inheritance
+        # Config.model_validate({}) triggers environment variable loading
         # If it returns a valid config, then environment variables have everything we need.
-        return Config()
+        return Config.model_validate({})
     except ValidationError:
         # Not enough in env vars, we'll try to supplement with the file
         pass
