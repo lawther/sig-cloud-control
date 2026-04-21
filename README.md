@@ -18,7 +18,7 @@ A Python library and CLI for controlling Sigenergy (Sigen Cloud) solar and batte
 - `charge`: Force charge the battery from the grid for a specified duration.
 - `discharge`: Force discharge the battery for a specified duration.
 - `hold`: Hold the battery at its current state of charge for a specified duration.
-- `self-consumption`: Explicitly enable self-consumption mode for a specified duration. The battery prioritises consuming solar generation. Returns to default behaviour when the duration expires.
+- `self-consumption`: Enable self-consumption mode for a specified duration. The battery prioritises consuming solar generation.
 - `cancel`: Immediately return the battery to its configured default mode (which may be self-consumption, VPP control, or another mode set by your installer).
 
 > **`self-consumption` vs `cancel`:** Use `self-consumption` to explicitly activate solar-first behaviour for a set period. Use `cancel` to immediately hand control back to the battery's configured default, whatever that may be.
