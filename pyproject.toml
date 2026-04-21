@@ -9,28 +9,27 @@ description = "Control Sigenergy battery via Sigen Cloud"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
-authors = [
-    { name = "Mike Lawther", email = "mike.lawther@gmail.com" },
-]
+authors = [{ name = "Mike Lawther", email = "mike.lawther@gmail.com" }]
 keywords = ["sigenergy", "sigen", "battery", "solar", "energy-storage", "iot"]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Topic :: Home Automation",
-    "Topic :: Software Development :: Libraries :: Python Modules",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Home Automation",
+  "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "cryptography~=46.0",
-    "httpx~=0.28",
-    "platformdirs>=4.0",
-    "pydantic-settings>=2.14.0",
-    "pydantic[email]~=2.12",
+  "cryptography~=46.0",
+  "httpx~=0.28",
+  "platformdirs>=4.0",
+  "pydantic-settings>=2.14.0",
+  "pydantic[email]~=2.12",
+  "tomli-w>=1.2.0",
 ]
 
 [project.urls]
@@ -39,21 +38,13 @@ Repository = "https://github.com/lawther/sig-cloud-control"
 Issues = "https://github.com/lawther/sig-cloud-control/issues"
 
 [project.optional-dependencies]
-cli = [
-    "tomli-w>=1.2.0",
-    "typer~=0.24",
-]
+cli = ["tomli-w>=1.2.0", "typer~=0.24"]
 
 [project.scripts]
 sig-cloud-control = "sig_cloud_control.cli_app:app"
 
 [dependency-groups]
-dev = [
-    "pytest~=9.0",
-    "pytest-asyncio~=1.3",
-    "ruff~=0.15",
-    "typer~=0.24",
-]
+dev = ["pytest~=9.0", "pytest-asyncio~=1.3", "ruff~=0.15", "typer~=0.24"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sig_cloud_control"]

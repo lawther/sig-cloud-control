@@ -97,7 +97,7 @@ password_encoded = "..."
 # Setup credentials interactively (saves to platform default config location)
 sig-cloud-control setup
 
-# Charge battery for 60 minutes at 2.5 kW (charge/discharge rate limit)
+# Charge battery for 60 minutes at 2.5 kW (charge rate limit)
 sig-cloud-control charge 60 --power 2.5
 
 # Discharge battery for 30 minutes at maximum rate
