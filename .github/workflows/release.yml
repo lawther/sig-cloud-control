@@ -19,6 +19,7 @@ jobs:
         id: release
         with:
           release-type: python
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   publish:
     runs-on: ubuntu-latest
