@@ -29,15 +29,14 @@ dependencies = [
   "platformdirs>=4.0",
   "pydantic-settings>=2.14.0",
   "pydantic[email]~=2.12",
+  "tomli-w>=1.2.0",
+  "typer~=0.24",
 ]
 
 [project.urls]
 Homepage = "https://github.com/lawther/sig-cloud-control"
 Repository = "https://github.com/lawther/sig-cloud-control"
 Issues = "https://github.com/lawther/sig-cloud-control/issues"
-
-[project.optional-dependencies]
-cli = ["tomli-w>=1.2.0", "typer~=0.24"]
 
 [project.scripts]
 sig-cloud-control = "sig_cloud_control.cli_app:app"
@@ -47,9 +46,7 @@ dev = [
   "pytest~=9.0",
   "pytest-asyncio~=1.3",
   "ruff~=0.15",
-  "tomli-w>=1.2.0",
   "ty~=0.0.32",
-  "typer~=0.24",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -1,13 +1,9 @@
 import os
-import sys
 from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import mock_open, patch
 
-# Mock tomli_w before importing the app because it's missing in the environment
-sys.modules["tomli_w"] = MagicMock()
-
-from sig_cloud_control.cli_app import load_config  # noqa: E402
-from sig_cloud_control.models import Config  # noqa: E402
+from sig_cloud_control.cli_app import load_config
+from sig_cloud_control.models import Config
 
 ENV_STATION_ID = 12345
 OVERRIDE_STATION_ID = 999
