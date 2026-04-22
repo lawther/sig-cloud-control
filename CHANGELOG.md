@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/lawther/sig-cloud-control/compare/v0.3.0...v0.3.1) (2026-04-22)
+
+
+### Documentation
+
+* update disclaimer wording and fix spelling in README ([77d4f40](https://github.com/lawther/sig-cloud-control/commit/77d4f4049a505b57ce07bb3b562ad57a4220c782))
+
 ## [0.3.0](https://github.com/lawther/sig-cloud-control/compare/v0.2.0...v0.3.0) (2026-04-22)
 
 
