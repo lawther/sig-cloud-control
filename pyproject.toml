@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sig-cloud-control"
-version = "0.1.0"
+version = "0.1.1"
 description = "Control Sigenergy battery via Sigen Cloud"
 readme = "README.md"
 requires-python = ">=3.12"
