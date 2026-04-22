@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/lawther/sig-cloud-control/compare/v0.2.0...v0.3.0) (2026-04-22)
+
+
+### Features
+
+* bump package version to 0.2.0 and update Region import in README examples ([ca2c857](https://github.com/lawther/sig-cloud-control/commit/ca2c85766038c0e243c4a0784a066a906341c30b))
+
 ## [0.2.0](https://github.com/lawther/sig-cloud-control/compare/v0.1.1...v0.2.0) (2026-04-22)
 
 
