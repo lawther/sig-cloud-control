@@ -17,6 +17,8 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           release-type: python
           token: ${{ secrets.GITHUB_TOKEN }}
