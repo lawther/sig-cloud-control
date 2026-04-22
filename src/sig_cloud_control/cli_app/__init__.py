@@ -3,8 +3,9 @@ import logging
 import os
 import sys
 import tomllib
+from enum import StrEnum
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, NamedTuple
 
 import tomli_w
 import typer
@@ -20,6 +21,28 @@ app = typer.Typer(help="Control a Sigen solar/battery station.")
 console = Console()
 
 _DEFAULT_CONFIG_PATH: Path = user_config_path("sig-cloud-control") / "config.toml"
+
+
+class SigenEnvVar(StrEnum):
+    """Sigen environment variable names.
+
+    Each member name (lowercased) is the corresponding Config field name,
+    and each value is the environment variable name.
+    """
+
+    USERNAME = "SIGEN_USERNAME"
+    PASSWORD = "SIGEN_PASSWORD"  # noqa: S105
+    PASSWORD_ENCODED = "SIGEN_PASSWORD_ENCODED"  # noqa: S105
+    STATION_ID = "SIGEN_STATION_ID"
+    REGION = "SIGEN_REGION"
+
+
+class ConfigSources(NamedTuple):
+    """The resolved configuration and the sources it was loaded from."""
+
+    env_vars_present: frozenset[SigenEnvVar]
+    config_file: Path | None
+    config: Config
 
 
 def _resolve_config_path(config_opt: str | None) -> Path:
@@ -41,7 +64,7 @@ def main(ctx: typer.Context) -> None:
         raise typer.Exit(code=1)
 
 
-def perform_setup(config_path: Path) -> Config:
+def perform_setup(config_path: Path) -> None:
     """Interactively prompt for credentials and save to file."""
     typer.echo(f"Setting up new configuration at '{config_path}'...")
     username = typer.prompt("Sigen Cloud login name (eg. user@example.com)")
@@ -86,56 +109,36 @@ def perform_setup(config_path: Path) -> Config:
     typer.secho(f"Success! Configuration saved to {config_path}", fg=typer.colors.GREEN)
     typer.echo("Note: Your password has been encrypted for storage.")
 
-    return Config(username=username, password_encoded=password_encoded, station_id=station_id, region=region)
 
+def _try_load_config(config_path: Path) -> ConfigSources | None:
+    """Attempt to load config from env vars and/or a TOML file.
 
-def load_config(config_path: Path) -> Config:
-    """Load configuration from environment variables and/or TOML file.
-
-    Precedence:
-    1. SIGEN_* Environment Variables
-    2. TOML file at config_path
-    3. Interactive setup (if both are missing)
+    Returns None if no valid config could be assembled (without triggering interactive setup).
+    Precedence: SIGEN_* environment variables override file values.
     """
-    typer.echo("Loading configuration...")
+    env_vars_present = frozenset(v for v in SigenEnvVar if v in os.environ)
 
-    # Load from environment variables first
     try:
-        # Config.model_validate({}) triggers environment variable loading
-        # If it returns a valid config, then environment variables have everything we need.
-        return Config.model_validate({})
+        config = Config.model_validate({})
+        return ConfigSources(env_vars_present=env_vars_present, config_file=None, config=config)
     except ValidationError:
-        # Not enough in env vars, we'll try to supplement with the file
         pass
 
     if not config_path.exists():
-        typer.secho(f"⚠️  Config file not found at '{config_path}'", fg=typer.colors.YELLOW)
-        return perform_setup(config_path)
+        return None
 
     try:
         with open(config_path, "rb") as f:
-            file_data = tomllib.load(f)
+            file_data: dict[str, object] = tomllib.load(f)
 
-        # Get what we have from environment variables (even if it's incomplete)
-        env_vars: dict[str, object] = {
-            "username": os.environ.get("SIGEN_USERNAME"),
-            "password": os.environ.get("SIGEN_PASSWORD"),
-            "password_encoded": os.environ.get("SIGEN_PASSWORD_ENCODED"),
-            "station_id": os.environ.get("SIGEN_STATION_ID"),
-            "region": os.environ.get("SIGEN_REGION"),
-        }
-        # Filter out None values and convert types
-        env_vars = {k: v for k, v in env_vars.items() if v is not None}
-        if "station_id" in env_vars and isinstance(env_vars["station_id"], str) and env_vars["station_id"].isdigit():
-            env_vars["station_id"] = int(env_vars["station_id"])
+        # TOML parses region as a plain string; coerce to Region for strict-mode validation.
+        # (env_settings handles this automatically; init_settings does not.)
+        if "region" in file_data and isinstance(file_data["region"], str):
+            file_data["region"] = Region(file_data["region"])
 
-        # Merge: Environment Variables OVER file data
-        merged_data = {**file_data, **env_vars}
-
-        # Coerce string region values (from file or env) to Region enum
-        if "region" in merged_data and isinstance(merged_data["region"], str):
-            merged_data["region"] = Region(merged_data["region"])
-        return Config.model_validate(merged_data)
+        # env_settings overrides init_settings per Config.settings_customise_sources.
+        config = Config(**file_data)
+        return ConfigSources(env_vars_present=env_vars_present, config_file=config_path, config=config)
     except ValidationError as e:
         typer.secho(
             f"❌ Error: Invalid configuration format in '{config_path}':\n{e}",
@@ -143,6 +146,20 @@ def load_config(config_path: Path) -> Config:
             err=True,
         )
         raise typer.Exit(code=1) from e
+
+
+def load_config(config_path: Path) -> Config:
+    """Load configuration from environment variables and/or TOML file, prompting for setup if missing."""
+    typer.echo("Loading configuration...")
+    sources = _try_load_config(config_path)
+    if sources is None:
+        typer.secho(f"⚠️  Config file not found at '{config_path}'", fg=typer.colors.YELLOW)
+        perform_setup(config_path)
+        sources = _try_load_config(config_path)
+        if sources is None:
+            typer.secho("❌ Configuration unavailable after setup.", fg=typer.colors.RED, err=True)
+            raise typer.Exit(code=1)
+    return sources.config
 
 
 async def execute_action(
@@ -266,6 +283,59 @@ def setup(
         )
 
     perform_setup(config_path)
+
+
+@app.command(name="show-config")
+def show_config(
+    config: ConfigOpt = None,
+) -> None:
+    """Show the current configuration and where it was loaded from."""
+    config_path = _resolve_config_path(config)
+    sources = _try_load_config(config_path)
+
+    if sources is None:
+        env_vars_present = frozenset(v for v in SigenEnvVar if v in os.environ)
+        local_config = Path("config.toml")
+        console.print("\n[bold yellow]⚠️  No configuration found.[/bold yellow]")
+        console.print("\n[bold]Locations checked:[/bold]")
+        if not env_vars_present:
+            all_vars = ", ".join(sorted(SigenEnvVar))
+            console.print(f"  Environment vars:  {all_vars} — [yellow]none set[/yellow]")
+        else:
+            set_vars = ", ".join(sorted(env_vars_present))
+            console.print(f"  Environment vars:  {set_vars} set, but insufficient")
+        local_status = "[yellow]not found[/yellow]" if not local_config.exists() else "found"
+        console.print(f"  Local config:      ./config.toml — {local_status}")
+        default_status = "[yellow]not found[/yellow]" if not _DEFAULT_CONFIG_PATH.exists() else "found"
+        console.print(f"  Default config:    {_DEFAULT_CONFIG_PATH} — {default_status}")
+        console.print("\nRun [bold]sig-cloud-control setup[/bold] to create a configuration file.")
+        raise typer.Exit(code=1)
+
+    console.print("\n[bold]Sources:[/bold]")
+    if sources.config_file is not None:
+        console.print(f"  Config file:       {sources.config_file}")
+    else:
+        console.print("  Config file:       [dim](not used — env vars were sufficient)[/dim]")
+
+    if sources.env_vars_present:
+        console.print(f"  Environment vars:  {', '.join(sorted(sources.env_vars_present))}")
+    else:
+        console.print("  Environment vars:  [dim](none)[/dim]")
+
+    console.print("\n[bold]Configuration:[/bold]")
+    console.print(f"  Username:          {sources.config.username}")
+
+    if sources.config.password is not None:
+        console.print("  Password:          [dim]*** (plaintext)[/dim]")
+    elif sources.config.password_encoded is not None:
+        console.print("  Password:          [dim]*** (encoded)[/dim]")
+
+    if sources.config.station_id is not None:
+        console.print(f"  Station ID:        {sources.config.station_id}")
+    else:
+        console.print("  Station ID:        [dim](auto-detect)[/dim]")
+
+    console.print(f"  Region:            {sources.config.region.value}")
 
 
 if __name__ == "__main__":

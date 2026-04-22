@@ -11,7 +11,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 PASSWORD_LEN_BYTES: Final[int] = 16
 MAX_DURATION_MINS: Final[int] = 1440
@@ -47,6 +47,18 @@ class Config(BaseSettings):
 
     region: Region
     """The Sigen Cloud regional data centre to connect to."""
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        # Environment variables take precedence over init kwargs (file data).
+        return (env_settings, init_settings)
 
     @model_validator(mode="after")
     def validate_password_source(self) -> Self:

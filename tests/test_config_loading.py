@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import mock_open, patch
 
 from sig_cloud_control.cli_app import load_config
-from sig_cloud_control.models import Config, Region
+from sig_cloud_control.models import Region
 
 ENV_STATION_ID = 12345
 OVERRIDE_STATION_ID = 999
@@ -71,14 +71,22 @@ def test_load_config_minimum_env_vars() -> None:
 
 
 def test_load_config_no_env_no_file_triggers_setup() -> None:
-    """Test that setup is triggered if no env vars and no file exist."""
+    """Test that setup is triggered if no env vars and no file exist.
+
+    After setup writes the file, load_config re-attempts _try_load_config.
+    We simulate this by having Path.exists return False (no file yet) on the
+    first check, then True (file written by setup) on the second check, and
+    providing a matching mock_open for the subsequent file read.
+    """
     config_path = Path("config.toml")
+    file_content = b'username = "setup@example.com"\npassword = "pw"\nregion = "aus"\n'
     with (
-        patch("pathlib.Path.exists", return_value=False),
+        patch("pathlib.Path.exists", side_effect=[False, True]),
         patch("sig_cloud_control.cli_app.perform_setup") as mock_setup,
+        patch("builtins.open", mock_open(read_data=file_content)),
         patch.dict(os.environ, {}, clear=True),
     ):
-        mock_setup.return_value = Config(username="setup@example.com", password="pw", region=Region.AUS)
+        mock_setup.return_value = None
         config = load_config(config_path)
         mock_setup.assert_called_once_with(config_path)
         assert config.username == "setup@example.com"
