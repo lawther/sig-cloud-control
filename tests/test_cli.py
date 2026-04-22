@@ -19,8 +19,8 @@ def test_cli_help_loads() -> None:
 
 def test_charge_command() -> None:
     with (
-        patch("sig_cloud_control.cli_app.load_config") as mock_load,
-        patch("sig_cloud_control.cli_app.execute_action", new_callable=AsyncMock) as mock_execute,
+        patch("sig_cloud_control.cli_app.actions.load_config") as mock_load,
+        patch("sig_cloud_control.cli_app.actions.execute_action", new_callable=AsyncMock) as mock_execute,
     ):
         mock_load.return_value = MagicMock()
 

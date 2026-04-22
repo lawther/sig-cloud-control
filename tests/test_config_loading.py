@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from unittest.mock import mock_open, patch
 
-from sig_cloud_control.cli_app import load_config
+from sig_cloud_control.cli_app.config import load_config
 from sig_cloud_control.models import Region
 
 ENV_STATION_ID = 12345
@@ -82,7 +82,7 @@ def test_load_config_no_env_no_file_triggers_setup() -> None:
     file_content = b'username = "setup@example.com"\npassword = "pw"\nregion = "aus"\n'
     with (
         patch("pathlib.Path.exists", side_effect=[False, True]),
-        patch("sig_cloud_control.cli_app.perform_setup") as mock_setup,
+        patch("sig_cloud_control.cli_app.config.perform_setup") as mock_setup,
         patch("builtins.open", mock_open(read_data=file_content)),
         patch.dict(os.environ, {}, clear=True),
     ):

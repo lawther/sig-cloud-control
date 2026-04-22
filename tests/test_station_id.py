@@ -47,7 +47,7 @@ async def test_try_login_from_cache_recovers_station_id_even_if_expired(config_n
         station_id=MOCK_STATION_ID_2,
     )
 
-    with patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=expired_cache):
+    with patch("sig_cloud_control.client.core.load_cache", new_callable=AsyncMock, return_value=expired_cache):
         # Should return False because token is expired
         result = await client._try_login_from_cache()
         assert result is False
@@ -77,8 +77,8 @@ async def test_login_skips_fetch_if_station_id_in_cache(config_no_station: Confi
         patch.object(
             httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=station_response
         ) as mock_get_station,
-        patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=None),
-        patch.object(SigCloudClient, "_save_cache", new_callable=AsyncMock) as mock_save,
+        patch("sig_cloud_control.client.core.load_cache", new_callable=AsyncMock, return_value=None),
+        patch("sig_cloud_control.client.core.save_cache", new_callable=AsyncMock) as mock_save,
     ):
         await client.login()
         assert client._station_id == MOCK_STATION_ID_3
@@ -96,8 +96,8 @@ async def test_login_skips_fetch_if_station_id_in_cache(config_no_station: Confi
     with (
         patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=login_response),
         patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock) as mock_get_station_2,
-        patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=expired_cache),
-        patch.object(SigCloudClient, "_save_cache", new_callable=AsyncMock),
+        patch("sig_cloud_control.client.core.load_cache", new_callable=AsyncMock, return_value=expired_cache),
+        patch("sig_cloud_control.client.core.save_cache", new_callable=AsyncMock),
     ):
         await client.login()
         assert client._station_id == MOCK_STATION_ID_3

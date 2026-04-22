@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from sig_cloud_control._encryption import encrypt_password
 from sig_cloud_control.client import SigCloudClient, SigCloudError
 from sig_cloud_control.models import Config, OperationMode, Region
 
@@ -26,7 +27,7 @@ def client(config: Config) -> SigCloudClient:
 def test_encrypt_password() -> None:
     password = "Sigen12345!"
     expected = "rV6FkNoIMt8nyDRbAUH/aw=="
-    assert SigCloudClient.encrypt_password(password) == expected
+    assert encrypt_password(password) == expected
 
 
 @pytest.mark.asyncio
@@ -58,8 +59,8 @@ async def test_login_success(client: SigCloudClient) -> None:
 
     with (
         patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=mock_response) as mock_post,
-        patch.object(SigCloudClient, "_save_cache", new_callable=AsyncMock),
-        patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=None),
+        patch("sig_cloud_control.client.core.save_cache", new_callable=AsyncMock),
+        patch("sig_cloud_control.client.core.load_cache", new_callable=AsyncMock, return_value=None),
     ):
         await client.login()
 
@@ -124,7 +125,7 @@ async def test_login_failure(client: SigCloudClient) -> None:
 
     with (
         patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=mock_response),
-        patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=None),
+        patch("sig_cloud_control.client.core.load_cache", new_callable=AsyncMock, return_value=None),
         pytest.raises(SigCloudError, match="Login failed with status 401: Unauthorized"),
     ):
         await client.login()
@@ -140,7 +141,7 @@ async def test_login_invalid_json_payload(client: SigCloudClient) -> None:
 
     with (
         patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=mock_response),
-        patch.object(SigCloudClient, "_load_cache", new_callable=AsyncMock, return_value=None),
+        patch("sig_cloud_control.client.core.load_cache", new_callable=AsyncMock, return_value=None),
         pytest.raises(SigCloudError, match="Unexpected error parsing login response"),
     ):
         await client.login()
@@ -151,13 +152,25 @@ async def test_cache_disabled(config: Config) -> None:
     client = SigCloudClient(config, cache_path=None)
     assert client.cache_path is None
 
-    with patch.object(SigCloudClient, "_load_cache", wraps=client._load_cache) as mock_load:
+    with patch("sig_cloud_control.client.core.load_cache") as mock_load:
         assert await client._try_login_from_cache() is False
         mock_load.assert_not_called()
 
-    with patch.object(SigCloudClient, "_write_cache_file", wraps=client._write_cache_file) as mock_write:
-        await client._save_cache(3600)
-        mock_write.assert_not_called()
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "access_token": "fake_token",
+        "token_type": "bearer",
+        "expires_in": 3600,
+    }
+
+    with (
+        patch("sig_cloud_control.client.core.save_cache") as mock_save,
+        patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=mock_response),
+    ):
+        await client.login()
+        # save_cache should still be called (it handles the None path internally)
+        mock_save.assert_called_once()
 
 
 def test_get_login_payload_no_password() -> None:

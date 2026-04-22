@@ -4,7 +4,9 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from sig_cloud_control.cli_app import _DEFAULT_CONFIG_PATH, ConfigSources, SigenEnvVar, app
+from sig_cloud_control.cli_app.config import ConfigSources, SigenEnvVar
+from sig_cloud_control.cli_app.constants import _DEFAULT_CONFIG_PATH
+from sig_cloud_control.cli_app.main import app
 from sig_cloud_control.models import Config, Region
 
 runner = CliRunner()
@@ -45,10 +47,10 @@ def _console_output(mock_console: MagicMock) -> str:
 def test_show_config_no_config_exits_with_error() -> None:
     # Smoke test: exits 1 when nothing is configured.
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=None),
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=None),
         patch("pathlib.Path.exists", return_value=False),
         patch.dict(os.environ, {}, clear=True),
-        patch("sig_cloud_control.cli_app.console"),
+        patch("sig_cloud_control.cli_app.main.console"),
     ):
         result = runner.invoke(app, ["show-config"])
 
@@ -59,10 +61,10 @@ def test_show_config_no_env_vars_lists_all_sigen_var_names() -> None:
     # When no SIGEN_* env vars are set, all of them are listed so the user
     # knows exactly what to set.
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=None),
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=None),
         patch("pathlib.Path.exists", return_value=False),
         patch.dict(os.environ, {}, clear=True),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         runner.invoke(app, ["show-config"])
 
@@ -76,10 +78,10 @@ def test_show_config_partial_env_vars_shows_which_are_set() -> None:
     # If some SIGEN_* vars are present but the config is still incomplete,
     # show which ones were found so the user knows what is missing.
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=None),
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=None),
         patch("pathlib.Path.exists", return_value=False),
         patch.dict(os.environ, {"SIGEN_USERNAME": "user@example.com"}, clear=True),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         runner.invoke(app, ["show-config"])
 
@@ -92,10 +94,10 @@ def test_show_config_no_config_shows_both_file_paths() -> None:
     # Both the local ./config.toml and the platform-default path are shown
     # so the user knows all the places that were checked.
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=None),
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=None),
         patch("pathlib.Path.exists", return_value=False),
         patch.dict(os.environ, {}, clear=True),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         runner.invoke(app, ["show-config"])
 
@@ -112,10 +114,10 @@ def test_show_config_local_file_present_shows_found() -> None:
         return str(self) == "config.toml"
 
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=None),
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=None),
         patch.object(Path, "exists", _exists),
         patch.dict(os.environ, {}, clear=True),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         runner.invoke(app, ["show-config"])
 
@@ -139,8 +141,8 @@ def test_show_config_env_vars_only_marks_file_as_not_used() -> None:
         config=_make_config(),
     )
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=sources),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=sources),
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         result = runner.invoke(app, ["show-config"])
 
@@ -162,8 +164,8 @@ def test_show_config_file_only_shows_path_and_no_env_vars() -> None:
         config=_make_config(),
     )
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=sources),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=sources),
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         result = runner.invoke(app, ["show-config"])
 
@@ -183,8 +185,8 @@ def test_show_config_file_and_env_vars_shows_both() -> None:
         config=_make_config(),
     )
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=sources),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=sources),
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         result = runner.invoke(app, ["show-config"])
 
@@ -206,8 +208,8 @@ def test_show_config_shows_username_and_region() -> None:
         config=_make_config(username="test@example.com", region=Region.EU),
     )
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=sources),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=sources),
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         runner.invoke(app, ["show-config"])
 
@@ -224,8 +226,8 @@ def test_show_config_masks_plaintext_password() -> None:
         config=_make_config(password="supersecret", password_encoded=None),
     )
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=sources),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=sources),
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         runner.invoke(app, ["show-config"])
 
@@ -242,8 +244,8 @@ def test_show_config_masks_encoded_password() -> None:
         config=_make_config(password=None, password_encoded=ENCODED_PASSWORD),
     )
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=sources),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=sources),
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         runner.invoke(app, ["show-config"])
 
@@ -259,8 +261,8 @@ def test_show_config_shows_station_id_when_set() -> None:
         config=_make_config(station_id=12345),
     )
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=sources),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=sources),
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         runner.invoke(app, ["show-config"])
 
@@ -276,8 +278,8 @@ def test_show_config_shows_auto_detect_when_station_id_absent() -> None:
         config=_make_config(station_id=None),
     )
     with (
-        patch("sig_cloud_control.cli_app._try_load_config", return_value=sources),
-        patch("sig_cloud_control.cli_app.console") as mock_console,
+        patch("sig_cloud_control.cli_app.main._try_load_config", return_value=sources),
+        patch("sig_cloud_control.cli_app.main.console") as mock_console,
     ):
         runner.invoke(app, ["show-config"])
 

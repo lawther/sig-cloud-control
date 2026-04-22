@@ -1,59 +1,28 @@
-import asyncio
-import base64
 import logging
-import os
 import time
 from http import HTTPStatus
 from pathlib import Path
-from typing import Final
 from uuid import uuid4
 
 import httpx
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from platformdirs import user_cache_path
 from pydantic import ValidationError
 
-from .models import (
+from .._encryption import encrypt_password
+from ..models import (
     MAX_DURATION_MINS,
     Config,
     LoginResponse,
     OperationMode,
     SetModeRequest,
-    TokenCache,
 )
+from .cache import _DEFAULT_CACHE_PATH, load_cache, save_cache
+from .exceptions import APIError, AuthenticationError, SigCloudError, StationError
 
 logger = logging.getLogger(__name__)
-
-_DEFAULT_CACHE_PATH: Final[Path] = user_cache_path("sig-cloud-control") / "token-cache.json"
-
-
-class SigCloudError(Exception):
-    """Base exception for SigCloudClient."""
-
-
-class AuthenticationError(SigCloudError):
-    """Raised when login fails (bad credentials or token error)."""
-
-
-class StationError(SigCloudError):
-    """Raised when the station ID cannot be resolved or is unknown."""
-
-
-class APIError(SigCloudError):
-    """Raised when the Sigen API returns an unexpected or unparseable response."""
 
 
 class SigCloudClient:
     """Client for interacting with Sigen Cloud API."""
-
-    # Fixed key and IV used by Sigen Cloud
-    _ENCRYPT_KEY: Final[bytes] = (b"s" + b"i" + b"g" + b"e" + b"n") * 3 + b"p"
-    _ENCRYPT_IV: Final[bytes] = (b"s" + b"i" + b"g" + b"e" + b"n") * 3 + b"p"
-    _CIPHER: Final[Cipher] = Cipher(
-        algorithms.AES(_ENCRYPT_KEY),
-        modes.CBC(_ENCRYPT_IV),
-    )
 
     def __init__(self, config: Config, cache_path: Path | None = _DEFAULT_CACHE_PATH) -> None:
         """Initialize the client with configuration."""
@@ -117,7 +86,7 @@ class SigCloudClient:
         if self.cache_path is None:
             return False
 
-        cache = await self._load_cache()
+        cache = await load_cache(self.cache_path)
         if not cache:
             return False
 
@@ -137,7 +106,7 @@ class SigCloudClient:
         if self.config.password_encoded:
             password_to_send = self.config.password_encoded
         elif self.config.password:
-            password_to_send = self.encrypt_password(self.config.password)
+            password_to_send = encrypt_password(self.config.password)
         else:
             # Unreachable due to Config validation
             msg = "Neither password nor password_encoded provided"
@@ -150,17 +119,6 @@ class SigCloudClient:
             "username": self.config.username,
             "password": password_to_send,
         }
-
-    @staticmethod
-    def encrypt_password(password: str) -> str:
-        """Encrypt a plaintext password using Sigen's AES-128-CBC logic."""
-        padder = padding.PKCS7(128).padder()
-        padded_data = padder.update(password.encode()) + padder.finalize()
-
-        encryptor = SigCloudClient._CIPHER.encryptor()
-        ct = encryptor.update(padded_data) + encryptor.finalize()
-
-        return base64.b64encode(ct).decode()
 
     async def login(self, use_cache: bool = True) -> None:
         """Authenticate with the Sigen API and store the access token. Checks cache first."""
@@ -199,41 +157,13 @@ class SigCloudClient:
         if self._station_id is None:
             await self._fetch_station_id()
 
-        await self._save_cache(login_response.expires_in_secs)
-        logger.info("Successfully logged in and cached token")
-
-    async def _load_cache(self) -> TokenCache | None:
-        """Load the token from the cache file if it exists and is valid."""
-        if self.cache_path is None:
-            return None
-        try:
-            content = await asyncio.to_thread(self.cache_path.read_text)
-            return TokenCache.model_validate_json(content)
-        except (FileNotFoundError, ValidationError):
-            return None
-        except Exception:
-            return None
-
-    def _write_cache_file(self, content: str) -> None:
-        """Helper to write the cache file securely with restricted permissions."""
-        if self.cache_path is None:
-            return
-        self.cache_path.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(self.cache_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(content)
-
-    async def _save_cache(self, expires_in: int) -> None:
-        """Save the current token and station ID to the cache file."""
-        if self.cache_path is None or self.access_token is None:
-            return
-        cache = TokenCache(
-            access_token=self.access_token,
-            expires_at=time.time() + expires_in,
-            station_id=self._station_id,
+        await save_cache(
+            self.cache_path,
+            self.access_token,
+            login_response.expires_in_secs,
+            self._station_id,
         )
-        content = cache.model_dump_json()
-        await asyncio.to_thread(self._write_cache_file, content)
+        logger.info("Successfully logged in and cached token")
 
     async def _fetch_station_id(self) -> None:
         """Fetch the station ID from the home info endpoint."""
