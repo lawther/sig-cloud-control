@@ -16,3 +16,6 @@ password = "your_password"
 # station_id is optional. If omitted, the library will fetch it automatically.
 # Find it in the Sigen app under Settings -> System Settings -> About.
 # station_id = 123456789
+
+# region is required. Supported values: aus, apac, eu, cn, us
+region = "aus"

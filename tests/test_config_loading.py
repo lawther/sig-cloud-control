@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import mock_open, patch
 
 from sig_cloud_control.cli_app import load_config
-from sig_cloud_control.models import Config
+from sig_cloud_control.models import Config, Region
 
 ENV_STATION_ID = 12345
 OVERRIDE_STATION_ID = 999
@@ -15,18 +15,29 @@ def test_load_config_env_vars_only() -> None:
         "SIGEN_USERNAME": "env@example.com",
         "SIGEN_PASSWORD": "envpassword",
         "SIGEN_STATION_ID": str(ENV_STATION_ID),
+        "SIGEN_REGION": "aus",
     }
     with patch.dict(os.environ, env):
         config = load_config(Path("nonexistent.toml"))
         assert config.username == "env@example.com"
         assert config.password == "envpassword"
         assert config.station_id == ENV_STATION_ID
+        assert config.region == Region.AUS
 
 
 def test_load_config_file_with_env_override() -> None:
     """Test that environment variables override file settings."""
-    file_content = b'username = "file@example.com"\npassword_encoded = "YWFhYWFhYWFhYWFhYWFhYQ=="\nstation_id = 111'
-    env = {"SIGEN_USERNAME": "override@example.com", "SIGEN_STATION_ID": str(OVERRIDE_STATION_ID)}
+    file_content = (
+        b'username = "file@example.com"\n'
+        b'password_encoded = "YWFhYWFhYWFhYWFhYWFhYQ=="\n'
+        b"station_id = 111\n"
+        b'region = "aus"\n'
+    )
+    env = {
+        "SIGEN_USERNAME": "override@example.com",
+        "SIGEN_STATION_ID": str(OVERRIDE_STATION_ID),
+        "SIGEN_REGION": "eu",
+    }
 
     with (
         patch("builtins.open", mock_open(read_data=file_content)),
@@ -38,6 +49,8 @@ def test_load_config_file_with_env_override() -> None:
         assert config.station_id == OVERRIDE_STATION_ID
         # password_encoded should still be from file
         assert config.password_encoded == "YWFhYWFhYWFhYWFhYWFhYQ=="
+        # region env var should override file value
+        assert config.region == Region.EU
 
 
 def test_load_config_minimum_env_vars() -> None:
@@ -45,6 +58,7 @@ def test_load_config_minimum_env_vars() -> None:
     env = {
         "SIGEN_USERNAME": "min@example.com",
         "SIGEN_PASSWORD": "minpassword",
+        "SIGEN_REGION": "us",
     }
     # Clear other SIGEN_ env vars to ensure we are testing the minimum
     with patch.dict(os.environ, env, clear=True):
@@ -53,6 +67,7 @@ def test_load_config_minimum_env_vars() -> None:
         assert config.password == "minpassword"
         assert config.password_encoded is None
         assert config.station_id is None
+        assert config.region == Region.US
 
 
 def test_load_config_no_env_no_file_triggers_setup() -> None:
@@ -63,7 +78,7 @@ def test_load_config_no_env_no_file_triggers_setup() -> None:
         patch("sig_cloud_control.cli_app.perform_setup") as mock_setup,
         patch.dict(os.environ, {}, clear=True),
     ):
-        mock_setup.return_value = Config(username="setup@example.com", password="pw")
+        mock_setup.return_value = Config(username="setup@example.com", password="pw", region=Region.AUS)
         config = load_config(config_path)
         mock_setup.assert_called_once_with(config_path)
         assert config.username == "setup@example.com"

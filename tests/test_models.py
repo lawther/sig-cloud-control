@@ -3,36 +3,36 @@ import base64
 import pytest
 from pydantic import ValidationError
 
-from sig_cloud_control.models import Config, OperationMode, SetModeRequest
+from sig_cloud_control.models import Config, OperationMode, Region, SetModeRequest
 
 
 def test_config_valid() -> None:
-    conf = Config(username="user@example.com", password_encoded="MDEyMzQ1Njc4OWFiY2RlZg==")
+    conf = Config(username="user@example.com", password_encoded="MDEyMzQ1Njc4OWFiY2RlZg==", region=Region.AUS)
     assert conf.username == "user@example.com"
 
 
 def test_config_invalid_email() -> None:
     with pytest.raises(ValidationError, match="value is not a valid email address"):
-        Config(username="not-an-email", password_encoded="MDEyMzQ1Njc4OWFiY2RlZg==")
+        Config(username="not-an-email", password_encoded="MDEyMzQ1Njc4OWFiY2RlZg==", region=Region.AUS)
 
 
 def test_config_invalid_password_length() -> None:
     # Only 15 bytes decoded
     short_pass = base64.b64encode(b"123456789012345").decode()
     with pytest.raises(ValidationError, match="must be a positive multiple of 16"):
-        Config(username="user@example.com", password_encoded=short_pass)
+        Config(username="user@example.com", password_encoded=short_pass, region=Region.AUS)
 
 
 def test_config_valid_long_password() -> None:
     # 32 bytes (valid multiple of 16)
     long_pass = base64.b64encode(b"1234567890123456" * 2).decode()
-    config = Config(username="user@example.com", password_encoded=long_pass)
+    config = Config(username="user@example.com", password_encoded=long_pass, region=Region.AUS)
     assert config.password_encoded == long_pass
 
 
 def test_config_invalid_base64() -> None:
     with pytest.raises(ValidationError, match="password_encoded must be a valid base64 string"):
-        Config(username="user@example.com", password_encoded="!!!not-base64!!!")
+        Config(username="user@example.com", password_encoded="!!!not-base64!!!", region=Region.AUS)
 
 
 def test_config_invalid_station_id() -> None:
@@ -41,6 +41,7 @@ def test_config_invalid_station_id() -> None:
             username="user@example.com",
             password_encoded="MDEyMzQ1Njc4OWFiY2RlZg==",
             station_id=0,
+            region=Region.AUS,
         )
 
 
@@ -131,3 +132,27 @@ def test_set_mode_request_invalid_self_consumption_with_power() -> None:
             duration=60,
             power_limitation=1.0,
         )
+
+
+def test_config_region_required() -> None:
+    # region has no default, so omitting it must raise a ValidationError
+    with pytest.raises(ValidationError):
+        Config.model_validate({"username": "user@example.com", "password_encoded": "MDEyMzQ1Njc4OWFiY2RlZg=="})
+
+
+def test_config_region_invalid_value() -> None:
+    with pytest.raises(ValidationError):
+        Config.model_validate(
+            {
+                "username": "user@example.com",
+                "password_encoded": "MDEyMzQ1Njc4OWFiY2RlZg==",
+                "region": "invalid",
+            }
+        )
+
+
+def test_config_region_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SIGEN_REGION", "eu")
+    # Config.model_validate({}) triggers env var loading
+    config = Config.model_validate({"username": "user@example.com", "password_encoded": "MDEyMzQ1Njc4OWFiY2RlZg=="})
+    assert config.region == Region.EU

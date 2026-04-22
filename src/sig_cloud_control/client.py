@@ -47,12 +47,6 @@ class APIError(SigCloudError):
 class SigCloudClient:
     """Client for interacting with Sigen Cloud API."""
 
-    # TODO: Support additional regions (currently only Australian data centre)
-    _BASE_URL: Final[str] = "https://api-aus.sigencloud.com"
-    _AUTH_URL: Final[str] = f"{_BASE_URL}/auth/oauth/token"
-    _MANUAL_MODE_URL: Final[str] = f"{_BASE_URL}/device/energy-profile/instant/manunal"
-    _STATION_INFO_URL: Final[str] = f"{_BASE_URL}/device/owner/station/home"
-
     # Fixed key and IV used by Sigen Cloud
     _ENCRYPT_KEY: Final[bytes] = (b"s" + b"i" + b"g" + b"e" + b"n") * 3 + b"p"
     _ENCRYPT_IV: Final[bytes] = (b"s" + b"i" + b"g" + b"e" + b"n") * 3 + b"p"
@@ -69,6 +63,11 @@ class SigCloudClient:
         self.access_token: str | None = None
         self._station_id: int | None = config.station_id
 
+        _base_url = f"https://api-{config.region.value}.sigencloud.com"
+        self._auth_url = f"{_base_url}/auth/oauth/token"
+        self._manual_mode_url = f"{_base_url}/device/energy-profile/instant/manunal"
+        self._station_info_url = f"{_base_url}/device/owner/station/home"
+
         # Setup base headers mimicking the app
         self._session_id = str(uuid4())
         self.client.headers.update(
@@ -76,10 +75,10 @@ class SigCloudClient:
                 "accept": "*/*",
                 "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
                 "auth-client-id": "sigen",
-                "client-server": "aus",
+                "client-server": config.region.value,
                 "lang": "en_US",
-                "origin": "https://app-aus.sigencloud.com",
-                "referer": "https://app-aus.sigencloud.com/",
+                "origin": f"https://app-{config.region.value}.sigencloud.com",
+                "referer": f"https://app-{config.region.value}.sigencloud.com/",
                 "sec-ch-ua": '"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"',
                 "sec-ch-ua-mobile": "?0",
                 "sec-ch-ua-platform": '"macOS"',
@@ -175,7 +174,7 @@ class SigCloudClient:
 
         data = self._get_login_payload()
 
-        response = await self.client.post(self._AUTH_URL, headers=headers, data=data)
+        response = await self.client.post(self._auth_url, headers=headers, data=data)
 
         if response.status_code != HTTPStatus.OK:
             logger.error("Login failed with status %s: %s", response.status_code, response.text)
@@ -238,9 +237,9 @@ class SigCloudClient:
 
     async def _fetch_station_id(self) -> None:
         """Fetch the station ID from the home info endpoint."""
-        logger.debug("Fetching station ID from %s", self._STATION_INFO_URL)
+        logger.debug("Fetching station ID from %s", self._station_info_url)
         headers = self._get_ts_headers()
-        response = await self.client.get(self._STATION_INFO_URL, headers=headers)
+        response = await self.client.get(self._station_info_url, headers=headers)
         response.raise_for_status()
 
         data = response.json()
@@ -277,7 +276,7 @@ class SigCloudClient:
         headers["content-type"] = "application/json; charset=utf-8"
 
         response = await self.client.put(
-            self._MANUAL_MODE_URL,
+            self._manual_mode_url,
             headers=headers,
             json=request_data.model_dump(mode="json", by_alias=True),
         )

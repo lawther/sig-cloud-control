@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from sig_cloud_control.client import SigCloudClient
-from sig_cloud_control.models import Config, TokenCache
+from sig_cloud_control.models import Config, Region, TokenCache
 
 MOCK_STATION_ID_1 = 98765
 MOCK_STATION_ID_2 = 55555
@@ -17,6 +17,7 @@ def config_no_station() -> Config:
     return Config(
         username="test@example.com",
         password_encoded="MDEyMzQ1Njc4OWFiY2RlZg==",
+        region=Region.AUS,
     )
 
 

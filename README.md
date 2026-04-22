@@ -10,8 +10,15 @@ A Python library and CLI for controlling Sigenergy (Sigen Cloud) solar and batte
 
 ## Compatibility
 
-> [⚠️ NOTE]
-> This tool currently only supports the **Australian** Sigen Cloud data centre (`api-aus.sigencloud.com`). Other regions are not yet supported.
+The following Sigen Cloud regional data centres are supported:
+
+| Region | Value | API Base URL |
+|--------|-------|-------------|
+| Australia / New Zealand | `aus` | `api-aus.sigencloud.com` |
+| Asia-Pacific (rest) | `apac` | `api-apac.sigencloud.com` |
+| Europe | `eu` | `api-eu.sigencloud.com` |
+| China | `cn` | `api-cn.sigencloud.com` |
+| United States | `us` | `api-us.sigencloud.com` |
 
 ## Operations
 
@@ -74,6 +81,7 @@ Environment variables take precedence over the configuration file:
 - `SIGEN_PASSWORD_ENCODED`: Your encrypted password (generate with `sig-cloud-control setup`).
 - `SIGEN_PASSWORD`: Your plaintext password (convenient for CI secrets).
 - `SIGEN_STATION_ID`: Your Station ID (optional).
+- `SIGEN_REGION`: Your regional data centre (e.g. `aus`, `eu`, `us`). See [Compatibility](#compatibility) for all values.
 
 ### Config File Format
 
@@ -85,6 +93,9 @@ password_encoded = "..."
 
 # OR use a plaintext password:
 # password = "your_plaintext_password"
+
+# region is required. Supported values: aus, apac, eu, cn, us
+region = "aus"
 
 # station_id is optional and will be fetched automatically if omitted.
 # Find it in the Sigen app under Settings -> System Settings -> About.
@@ -136,9 +147,12 @@ import asyncio
 from sig_cloud_control import SigCloudClient, Config
 
 async def main():
+    from sig_cloud_control import Region
+
     config = Config(
         username="user@example.com",
-        password="my_secret_password"
+        password="my_secret_password",
+        region=Region.AUS,
     )
 
     # Use as an async context manager — handles cleanup automatically

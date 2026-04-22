@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from sig_cloud_control.client import SigCloudClient, SigCloudError
-from sig_cloud_control.models import Config, OperationMode
+from sig_cloud_control.models import Config, OperationMode, Region
 
 
 @pytest.fixture
@@ -14,6 +14,7 @@ def config() -> Config:
         username="test@example.com",
         password_encoded="MDEyMzQ1Njc4OWFiY2RlZg==",
         station_id=12345,
+        region=Region.AUS,
     )
 
 
@@ -160,8 +161,25 @@ async def test_cache_disabled(config: Config) -> None:
 
 
 def test_get_login_payload_no_password() -> None:
-    # Use model_construct to bypass Pydantic validation
-    config = Config.model_construct(username="test@example.com")
+    # Use model_construct to bypass Pydantic validation (skips the password requirement)
+    config = Config.model_construct(username="test@example.com", region=Region.AUS)
     client = SigCloudClient(config)
     with pytest.raises(SigCloudError, match="Neither password nor password_encoded provided"):
         client._get_login_payload()
+
+
+def test_client_urls_and_headers_use_region() -> None:
+    # Verify that a non-AUS region flows through to all URLs and headers
+    eu_config = Config(
+        username="test@example.com",
+        password_encoded="MDEyMzQ1Njc4OWFiY2RlZg==",
+        region=Region.EU,
+    )
+    client = SigCloudClient(eu_config)
+
+    assert "api-eu" in client._auth_url
+    assert "api-eu" in client._manual_mode_url
+    assert "api-eu" in client._station_info_url
+    assert client.client.headers["client-server"] == "eu"
+    assert "app-eu" in client.client.headers["origin"]
+    assert "app-eu" in client.client.headers["referer"]

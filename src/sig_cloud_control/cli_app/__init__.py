@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from rich.console import Console
 
 from sig_cloud_control.client import SigCloudClient, SigCloudError
-from sig_cloud_control.models import Config
+from sig_cloud_control.models import Config, Region
 
 app = typer.Typer(help="Control a Sigen solar/battery station.")
 
@@ -46,6 +46,23 @@ def perform_setup(config_path: Path) -> Config:
     typer.echo(f"Setting up new configuration at '{config_path}'...")
     username = typer.prompt("Sigen Cloud login name (eg. user@example.com)")
     password = typer.prompt("Sigen Cloud Password", hide_input=True)
+    _region_labels: dict[Region, str] = {
+        Region.AUS: "Australia / New Zealand",
+        Region.APAC: "Asia-Pacific",
+        Region.EU: "Europe",
+        Region.CN: "China",
+        Region.US: "United States",
+    }
+    _regions = list(Region)
+    typer.echo("Select your region (check your Sigenergy app Settings->System Settings->About):")
+    for i, r in enumerate(_regions, 1):
+        typer.echo(f"  {i}. {r.value:<6} {_region_labels[r]}")
+    while True:
+        _choice = typer.prompt(f"Region [1-{len(_regions)}]", type=int)
+        if 1 <= _choice <= len(_regions):
+            region = _regions[_choice - 1]
+            break
+        typer.secho(f"Please enter a number between 1 and {len(_regions)}.", fg=typer.colors.RED)
     station_id_str = typer.prompt("Station ID (optional, press Enter to skip)", default="")
 
     password_encoded = SigCloudClient.encrypt_password(password)
@@ -55,6 +72,7 @@ def perform_setup(config_path: Path) -> Config:
     config_data: dict[str, object] = {
         "username": username,
         "password_encoded": password_encoded,
+        "region": region.value,
     }
     if station_id:
         config_data["station_id"] = station_id
@@ -68,7 +86,7 @@ def perform_setup(config_path: Path) -> Config:
     typer.secho(f"Success! Configuration saved to {config_path}", fg=typer.colors.GREEN)
     typer.echo("Note: Your password has been encrypted for storage.")
 
-    return Config(username=username, password_encoded=password_encoded, station_id=station_id)
+    return Config(username=username, password_encoded=password_encoded, station_id=station_id, region=region)
 
 
 def load_config(config_path: Path) -> Config:
@@ -104,6 +122,7 @@ def load_config(config_path: Path) -> Config:
             "password": os.environ.get("SIGEN_PASSWORD"),
             "password_encoded": os.environ.get("SIGEN_PASSWORD_ENCODED"),
             "station_id": os.environ.get("SIGEN_STATION_ID"),
+            "region": os.environ.get("SIGEN_REGION"),
         }
         # Filter out None values and convert types
         env_vars = {k: v for k, v in env_vars.items() if v is not None}
@@ -112,6 +131,10 @@ def load_config(config_path: Path) -> Config:
 
         # Merge: Environment Variables OVER file data
         merged_data = {**file_data, **env_vars}
+
+        # Coerce string region values (from file or env) to Region enum
+        if "region" in merged_data and isinstance(merged_data["region"], str):
+            merged_data["region"] = Region(merged_data["region"])
         return Config.model_validate(merged_data)
     except ValidationError as e:
         typer.secho(

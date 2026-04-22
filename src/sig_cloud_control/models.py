@@ -18,6 +18,14 @@ MAX_DURATION_MINS: Final[int] = 1440
 MAX_POWER_LIMIT_KW: Final[float] = 100.0
 
 
+class Region(StrEnum):
+    AUS = "aus"
+    APAC = "apac"
+    EU = "eu"
+    CN = "cn"
+    US = "us"
+
+
 class Config(BaseSettings):
     model_config = SettingsConfigDict(
         strict=True,
@@ -36,6 +44,9 @@ class Config(BaseSettings):
 
     station_id: int | None = Field(default=None, gt=0)
     """Optional station ID. Must be positive if provided."""
+
+    region: Region
+    """The Sigen Cloud regional data centre to connect to."""
 
     @model_validator(mode="after")
     def validate_password_source(self) -> Self:
