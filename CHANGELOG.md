@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/lawther/sig-cloud-control/compare/v0.1.0...v0.1.1) (2026-04-22)
+
+
+### Bug Fixes
+
+* correct pyproject.toml packaging configuration ([0e62d59](https://github.com/lawther/sig-cloud-control/commit/0e62d59e29ed9f7d534aaf798ea0e6382d26d0fd))
+
 ## 0.1.0 (2026-04-21)
 
 
