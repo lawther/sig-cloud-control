@@ -144,10 +144,9 @@ You can use `sig-cloud-control` as a library in your own asynchronous Python app
 
 ```python
 import asyncio
-from sig_cloud_control import SigCloudClient, Config
+from sig_cloud_control import SigCloudClient, Config, Region
 
 async def main():
-    from sig_cloud_control import Region
 
     config = Config(
         username="user@example.com",
