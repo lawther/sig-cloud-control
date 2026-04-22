@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/lawther/sig-cloud-control/compare/v0.1.1...v0.2.0) (2026-04-22)
+
+
+### Features
+
+* add multi-region support ([94ae05c](https://github.com/lawther/sig-cloud-control/commit/94ae05c83ab159d66989f9a5f16f7f80ce0f1665))
+* add show-config command ([e50b785](https://github.com/lawther/sig-cloud-control/commit/e50b78525c6b5f8442023c6910b9b7787124a635))
+
 ## [0.1.1](https://github.com/lawther/sig-cloud-control/compare/v0.1.0...v0.1.1) (2026-04-22)
 
 
