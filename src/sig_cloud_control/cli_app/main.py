@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from rich.markup import escape
 
 from .actions import _run_command_action, console
 from .config import SigenEnvVar, _resolve_config_path, _try_load_config
@@ -113,15 +114,20 @@ def show_config(
             set_vars = ", ".join(sorted(env_vars_present))
             console.print(f"  Environment vars:  {set_vars} set, but insufficient")
         local_status = "[yellow]not found[/yellow]" if not local_config.exists() else "found"
-        console.print(f"  Local config:      ./config.toml — {local_status}")
+        console.print(f"  Local config:      [repr.path]./config.toml[/repr.path] — {local_status}", highlight=False)
         default_status = "[yellow]not found[/yellow]" if not _DEFAULT_CONFIG_PATH.exists() else "found"
-        console.print(f"  Default config:    {_DEFAULT_CONFIG_PATH} — {default_status}")
+        console.print(
+            f"  Default config:    [repr.path]{escape(str(_DEFAULT_CONFIG_PATH))}[/repr.path] — {default_status}",
+            highlight=False,
+        )
         console.print("\nRun [bold]sig-cloud-control setup[/bold] to create a configuration file.")
         raise typer.Exit(code=1)
 
     console.print("\n[bold]Sources:[/bold]")
     if sources.config_file is not None:
-        console.print(f"  Config file:       {sources.config_file}")
+        console.print(
+            f"  Config file:       [repr.path]{escape(str(sources.config_file))}[/repr.path]", highlight=False
+        )
     else:
         console.print("  Config file:       [dim](not used — env vars were sufficient)[/dim]")
 

@@ -122,7 +122,8 @@ def test_show_config_local_file_present_shows_found() -> None:
         runner.invoke(app, ["show-config"])
 
     output = _console_output(mock_console)
-    assert "config.toml — found" in output
+    assert "./config.toml" in output
+    assert "found" in output
     assert str(_DEFAULT_CONFIG_PATH) in output
     assert "not found" in output  # default path still not found
 
