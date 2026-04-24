@@ -135,21 +135,20 @@ class SigCloudClient:
 
     def _get_login_payload(self) -> dict[str, str]:
         """Prepare the payload for the login request."""
-        if self.config.password_encoded:
-            password_to_send = self.config.password_encoded
-        elif self.config.password:
-            password_to_send = self.encrypt_password(self.config.password)
-        else:
-            # Unreachable due to Config validation
-            msg = "Neither password nor password_encoded provided"
-            raise SigCloudError(msg)
+        if not self.config.password_encoded:
+            if self.config.password:
+                self.config.password_encoded = self.encrypt_password(self.config.password)
+            else:
+                # Unreachable due to Config validation
+                msg = "Neither password nor password_encoded provided"
+                raise SigCloudError(msg)
 
         return {
             "scope": "server",
             "grant_type": "password",
             "userDeviceId": str(int(time.time() * 1000)),
             "username": self.config.username,
-            "password": password_to_send,
+            "password": self.config.password_encoded,
         }
 
     @staticmethod
