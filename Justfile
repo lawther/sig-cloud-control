@@ -46,6 +46,7 @@ precommit:
         set -e
         just _lint-justfile
         just lint
+        git add $(git diff --cached --name-only)
         just test
     ) > "$tmpfile" 2>&1
     status=$?
