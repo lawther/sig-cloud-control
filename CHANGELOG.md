@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/lawther/sig-cloud-control/compare/v0.3.1...v0.3.2) (2026-04-24)
+
+
+### Bug Fixes
+
+* **cli:** correct path highlighting in show-config command ([d915a55](https://github.com/lawther/sig-cloud-control/commit/d915a55141b8852aeb6ff9973c4e887d9d05d9f5))
+
 ## [0.3.1](https://github.com/lawther/sig-cloud-control/compare/v0.3.0...v0.3.1) (2026-04-22)
 
 
