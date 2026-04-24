@@ -240,15 +240,16 @@ class SigCloudClient:
             duration=duration,
             power_limitation=power_limitation,
         )
+        payload = request_data.model_dump(mode="json", by_alias=True)
 
-        logger.debug("Sending mode update: %s", request_data.model_dump(by_alias=True))
+        logger.debug("Sending mode update: %s", payload)
         headers = self._get_ts_headers()
         headers["content-type"] = "application/json; charset=utf-8"
 
         response = await self.client.put(
             self._MANUAL_MODE_URL,
             headers=headers,
-            json=request_data.model_dump(mode="json", by_alias=True),
+            json=payload,
         )
         response.raise_for_status()
         logger.info("Successfully updated mode to %s", mode.name)
