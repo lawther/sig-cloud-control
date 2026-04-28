@@ -41,12 +41,14 @@ precommit:
     echo "Running pre-commit checks..."
     uv lock --check || { echo "❌ uv.lock is out of sync with pyproject.toml"; exit 1; }
     tmpfile=$(mktemp)
-    trap 'rm -f "$tmpfile"' EXIT
+    staged_list=$(mktemp)
+    trap 'rm -f "$tmpfile" "$staged_list"' EXIT
+    git diff --cached --name-only -z --diff-filter=d > "$staged_list"
     (
         set -e
         just _lint-justfile
         just lint
-        git add $(git diff --cached --name-only)
+        xargs -r -0 git add < "$staged_list"
         just test
     ) > "$tmpfile" 2>&1
     status=$?
