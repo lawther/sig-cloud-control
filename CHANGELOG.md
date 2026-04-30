@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/lawther/sig-cloud-control/compare/v0.3.2...v0.3.3) (2026-04-30)
+
+
+### Documentation
+
+* add quickstart guide, power flag explanation, and updated installation instructions to README ([4d6b90b](https://github.com/lawther/sig-cloud-control/commit/4d6b90bbd9bc19f7f0c1bc39e409e46eae072ebd))
+
 ## [0.3.2](https://github.com/lawther/sig-cloud-control/compare/v0.3.1...v0.3.2) (2026-04-24)
 
 
