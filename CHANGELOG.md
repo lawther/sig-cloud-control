@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/lawther/sig-cloud-control/compare/v0.3.3...v0.4.0) (2026-04-30)
+
+
+### Features
+
+* upgrade release-please-action to v5 ([e9a4d77](https://github.com/lawther/sig-cloud-control/commit/e9a4d771b939eb3c364dfcf64bf6e6b828119735))
+
 ## [0.3.3](https://github.com/lawther/sig-cloud-control/compare/v0.3.2...v0.3.3) (2026-04-30)
 
 
