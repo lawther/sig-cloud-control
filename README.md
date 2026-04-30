@@ -8,6 +8,14 @@ A Python library and CLI for controlling Sigenergy (Sigen Cloud) solar and batte
 > - **Warranty Warning:** Using this tool may violate your Sigenergy Terms of Service and could potentially void your hardware warranty. The author is not responsible for any loss of warranty or damage to equipment.
 > - **Reverse Engineering:** This tool was developed for the purpose of interoperability between Sigenergy batteries and third-party automation systems.
 
+## Quickstart
+
+```bash
+uv tool install sig-cloud-control
+sig-cloud-control setup
+sig-cloud-control charge 30
+```
+
 ## Compatibility
 
 The following Sigen Cloud regional data centres are supported:
@@ -28,17 +36,23 @@ The following Sigen Cloud regional data centres are supported:
 - `self-consumption`: Enable self-consumption mode for a specified duration. The battery prioritises consuming solar generation.
 - `cancel`: Immediately return the battery to its configured default mode (which may be self-consumption, VPP control, or another mode set by your installer).
 
-> **`self-consumption` vs `cancel`:** Use `self-consumption` to explicitly activate solar-first behaviour for a set period. Use `cancel` to immediately hand control back to the battery's configured default, whatever that may be.
+All times are specified in minutes. A power limit can be specified in kilowatts (kW) using the --power flag. For example, --power 5.0 means 5 kW. If no power limit is specified, the maximum power will be used.
 
 ## Installation
 
 ### From PyPI (Recommended)
 
 ```bash
-pip install sig-cloud-control
-# or using uv
+# For just the CLI
 uv tool install sig-cloud-control
+# To get the library for use in your project. If you use this, you use 'uv run sig-cloud-control ...' to run the CLI
+uv add sig-cloud-control
 ```
+Or using pip
+```bash
+pip install sig-cloud-control
+```
+
 
 ### From Source (Development)
 
