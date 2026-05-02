@@ -25,12 +25,8 @@ setup-dev:
 
 # Setup local git hooks
 setup-git-hooks:
-    @echo "Setting up local git hooks..."
-    @echo "#!/bin/sh" > .git/hooks/pre-commit
-    @echo "# This hook invokes the Justfile, which is the Single Source Of Truth for precommit logic." >> .git/hooks/pre-commit
-    @echo "# DO NOT add precommit logic here; add it to the 'precommit' recipe in the Justfile." >> .git/hooks/pre-commit
-    @echo "just precommit" >> .git/hooks/pre-commit
-    @chmod +x .git/hooks/pre-commit
+    @git config core.hooksPath .githooks
+    @chmod +x .githooks/pre-commit
     @echo "✅ Git hooks set up!"
 
 # Run linting and tests (pre-commit check)
@@ -38,6 +34,10 @@ setup-git-hooks:
 # No additional linting or testing logic should be added anywhere else (e.g. CI configs).
 precommit:
     #!/usr/bin/env bash
+    if [[ "$(git config core.hooksPath 2>/dev/null)" != ".githooks" ]]; then
+        echo "Git hooks not configured — installing now..."
+        just setup-git-hooks
+    fi
     echo "Running pre-commit checks..."
     uv lock --check || { echo "❌ uv.lock is out of sync with pyproject.toml"; exit 1; }
     tmpfile=$(mktemp)
