@@ -11,7 +11,12 @@ sync:
 lint:
     uv run ruff format .
     uv run ruff check --fix .
+    just extra-lints
     uv run ty check
+
+# Check for bare dict/tuple return types and classes defined inside functions (ML001, ML002)
+extra-lints:
+    @uv run ml-lint src/
 
 # Run tests
 test:

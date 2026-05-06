@@ -1,6 +1,6 @@
 import base64
 from enum import StrEnum
-from typing import Final, Self
+from typing import Final, NamedTuple, Self
 
 from pydantic import (
     BaseModel,
@@ -24,6 +24,13 @@ class Region(StrEnum):
     EU = "eu"
     CN = "cn"
     US = "us"
+
+
+class SettingsSources(NamedTuple):
+    """Pydantic settings sources in precedence order."""
+
+    env: PydanticBaseSettingsSource
+    init: PydanticBaseSettingsSource
 
 
 class Config(BaseSettings):
@@ -56,9 +63,9 @@ class Config(BaseSettings):
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
-    ) -> tuple[PydanticBaseSettingsSource, ...]:
+    ) -> SettingsSources:
         # Environment variables take precedence over init kwargs (file data).
-        return (env_settings, init_settings)
+        return SettingsSources(env=env_settings, init=init_settings)
 
     @model_validator(mode="after")
     def validate_password_source(self) -> Self:

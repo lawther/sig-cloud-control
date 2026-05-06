@@ -1,7 +1,9 @@
 import logging
 import time
+from enum import StrEnum
 from http import HTTPStatus
 from pathlib import Path
+from typing import Any, NamedTuple, cast
 from uuid import uuid4
 
 import httpx
@@ -19,6 +21,54 @@ from .cache import _DEFAULT_CACHE_PATH, load_cache, save_cache
 from .exceptions import APIError, AuthenticationError, SigCloudError, StationError
 
 logger = logging.getLogger(__name__)
+
+
+class APIKey(StrEnum):
+    """Known API header and payload keys."""
+
+    LOG_ID = "sg-log-id"
+    TS = "sg-ts"
+    SCOPE = "scope"
+    GRANT_TYPE = "grant_type"
+    USER_DEVICE_ID = "userDeviceId"
+    USERNAME = "username"
+    PASSWORD = "password"  # noqa: S105
+    AUTHORIZATION = "authorization"
+    CONTENT_TYPE = "content-type"
+
+
+class TSHeaders(NamedTuple):
+    """Headers for time-sensitive requests."""
+
+    log_id: str
+    ts: str
+
+    def to_dict(self) -> dict[APIKey, str]:
+        """Convert to dictionary with API-expected keys."""
+        return {
+            APIKey.LOG_ID: self.log_id,
+            APIKey.TS: self.ts,
+        }
+
+
+class LoginPayload(NamedTuple):
+    """Payload for login requests."""
+
+    scope: str
+    grant_type: str
+    user_device_id: str
+    username: str
+    password: str
+
+    def to_dict(self) -> dict[APIKey, str]:
+        """Convert to dictionary with API-expected keys."""
+        return {
+            APIKey.SCOPE: self.scope,
+            APIKey.GRANT_TYPE: self.grant_type,
+            APIKey.USER_DEVICE_ID: self.user_device_id,
+            APIKey.USERNAME: self.username,
+            APIKey.PASSWORD: self.password,
+        }
 
 
 class SigCloudClient:
@@ -75,11 +125,11 @@ class SigCloudClient:
         """Exit the async context manager and close the HTTP client."""
         await self.aclose()
 
-    def _get_ts_headers(self) -> dict[str, str]:
-        return {
-            "sg-log-id": str(uuid4()),
-            "sg-ts": str(int(time.time() * 1_000_000)),
-        }
+    def _get_ts_headers(self) -> TSHeaders:
+        return TSHeaders(
+            log_id=str(uuid4()),
+            ts=str(int(time.time() * 1_000_000)),
+        )
 
     async def _try_login_from_cache(self) -> bool:
         """Attempt to load credentials from the local cache. Returns True if successful."""
@@ -97,11 +147,11 @@ class SigCloudClient:
         if cache.expires_at > time.time() + 60:  # Valid for at least another minute
             logger.debug("Using cached token")
             self.access_token = cache.access_token
-            self.client.headers["authorization"] = f"bearer {self.access_token}"
+            self.client.headers[APIKey.AUTHORIZATION] = f"bearer {self.access_token}"
             return True
         return False
 
-    def _get_login_payload(self) -> dict[str, str]:
+    def _get_login_payload(self) -> LoginPayload:
         """Prepare the payload for the login request."""
         if self.config.password_encoded:
             password_to_send = self.config.password_encoded
@@ -112,13 +162,13 @@ class SigCloudClient:
             msg = "Neither password nor password_encoded provided"
             raise SigCloudError(msg)
 
-        return {
-            "scope": "server",
-            "grant_type": "password",
-            "userDeviceId": str(int(time.time() * 1000)),
-            "username": self.config.username,
-            "password": password_to_send,
-        }
+        return LoginPayload(
+            scope="server",
+            grant_type="password",
+            user_device_id=str(int(time.time() * 1000)),
+            username=self.config.username,
+            password=password_to_send,
+        )
 
     async def login(self, use_cache: bool = True) -> None:
         """Authenticate with the Sigen API and store the access token. Checks cache first."""
@@ -126,13 +176,17 @@ class SigCloudClient:
             return
 
         logger.info("Logging in to Sigen Cloud as %s", self.config.username)
-        headers = self._get_ts_headers()
-        headers["authorization"] = "Basic c2lnZW46c2lnZW4="
-        headers["content-type"] = "application/x-www-form-urlencoded"
+        headers = dict(self._get_ts_headers().to_dict())
+        headers[APIKey.AUTHORIZATION] = "Basic c2lnZW46c2lnZW4="
+        headers[APIKey.CONTENT_TYPE] = "application/x-www-form-urlencoded"
 
-        data = self._get_login_payload()
+        data = self._get_login_payload().to_dict()
 
-        response = await self.client.post(self._auth_url, headers=headers, data=data)
+        response = await self.client.post(
+            self._auth_url,
+            headers=cast(dict[str, str], headers),
+            data=cast(dict[str, Any], data),
+        )
 
         if response.status_code != HTTPStatus.OK:
             logger.error("Login failed with status %s: %s", response.status_code, response.text)
@@ -151,7 +205,7 @@ class SigCloudClient:
             raise APIError(f"Unexpected error parsing login response: {e}. Raw payload: {response.text}") from e
 
         self.access_token = login_response.access_token
-        self.client.headers["authorization"] = f"bearer {self.access_token}"
+        self.client.headers[APIKey.AUTHORIZATION] = f"bearer {self.access_token}"
 
         # If station_id wasn't provided in config, fetch it
         if self._station_id is None:
@@ -168,8 +222,8 @@ class SigCloudClient:
     async def _fetch_station_id(self) -> None:
         """Fetch the station ID from the home info endpoint."""
         logger.debug("Fetching station ID from %s", self._station_info_url)
-        headers = self._get_ts_headers()
-        response = await self.client.get(self._station_info_url, headers=headers)
+        headers = self._get_ts_headers().to_dict()
+        response = await self.client.get(self._station_info_url, headers=cast(dict[str, str], headers))
         response.raise_for_status()
 
         data = response.json()
@@ -202,12 +256,12 @@ class SigCloudClient:
         )
 
         logger.debug("Sending mode update: %s", request_data.model_dump(by_alias=True))
-        headers = self._get_ts_headers()
-        headers["content-type"] = "application/json; charset=utf-8"
+        headers = dict(self._get_ts_headers().to_dict())
+        headers[APIKey.CONTENT_TYPE] = "application/json; charset=utf-8"
 
         response = await self.client.put(
             self._manual_mode_url,
-            headers=headers,
+            headers=cast(dict[str, str], headers),
             json=request_data.model_dump(mode="json", by_alias=True),
         )
         response.raise_for_status()
