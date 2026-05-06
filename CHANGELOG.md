@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/lawther/sig-cloud-control/compare/v0.4.0...v0.5.0) (2026-05-06)
+
+
+### Features
+
+* add version-controlled git hooks and auto-install on precommit ([278275f](https://github.com/lawther/sig-cloud-control/commit/278275f288cd9c3e55c6d30a8046c68fe2fc6c58))
+
 ## [0.4.0](https://github.com/lawther/sig-cloud-control/compare/v0.3.3...v0.4.0) (2026-04-30)
 
 
