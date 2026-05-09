@@ -16,6 +16,7 @@ from ..models import (
     LoginResponse,
     OperationMode,
     SetModeRequest,
+    StationInfoResponse,
 )
 from .cache import _DEFAULT_CACHE_PATH, load_cache, save_cache
 from .exceptions import APIError, AuthenticationError, SigCloudError, StationError
@@ -193,10 +194,7 @@ class SigCloudClient:
             raise AuthenticationError(f"Login failed with status {response.status_code}: {response.text}")
 
         try:
-            payload = response.json()
-            # Handle potential wrapping or direct payload
-            token_data = payload.get("data", payload) if isinstance(payload, dict) else payload
-            login_response = LoginResponse.model_validate(token_data)
+            login_response = LoginResponse.model_validate(response.json())
         except ValidationError as e:
             logger.error("Failed to parse login response: %s", response.text)
             raise APIError(f"Failed to parse login response. Raw payload: {response.text}. Error: {e}") from e
@@ -226,9 +224,8 @@ class SigCloudClient:
         response = await self.client.get(self._station_info_url, headers=cast(dict[str, str], headers))
         response.raise_for_status()
 
-        data = response.json()
-        if data.get("code") == 0 and "data" in data:
-            self._station_id = data["data"].get("stationId")
+        station_resp = StationInfoResponse.model_validate(response.json())
+        self._station_id = station_resp.data.station_id
 
         if self._station_id is None:
             logger.error("Could not retrieve station ID. Response: %s", response.text)

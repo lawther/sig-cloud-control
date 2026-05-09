@@ -1,6 +1,6 @@
 import base64
 from enum import StrEnum
-from typing import Final, NamedTuple, Self
+from typing import Any, Final, NamedTuple, Self
 
 from pydantic import (
     BaseModel,
@@ -16,6 +16,19 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, Settings
 PASSWORD_LEN_BYTES: Final[int] = 16
 MAX_DURATION_MINS: Final[int] = 1440
 MAX_POWER_LIMIT_KW: Final[float] = 100.0
+
+
+class StationInfo(BaseModel):
+    """Station identification information."""
+
+    station_id: int = Field(alias="stationId", gt=0)
+
+
+class StationInfoResponse(BaseModel):
+    """Response containing station information."""
+
+    code: int
+    data: StationInfo
 
 
 class Region(StrEnum):
@@ -67,6 +80,17 @@ class Config(BaseSettings):
         # Environment variables take precedence over init kwargs (file data).
         return SettingsSources(env=env_settings, init=init_settings)
 
+    @field_validator("region", mode="before")
+    @classmethod
+    def validate_region(cls, v: Any) -> Any:  # noqa: ANN401
+        """Coerce string to Region enum if needed."""
+        if isinstance(v, str):
+            try:
+                return Region(v)
+            except ValueError:
+                return v
+        return v
+
     @model_validator(mode="after")
     def validate_password_source(self) -> Self:
         if self.password is None and self.password_encoded is None:
@@ -105,6 +129,14 @@ class LoginResponse(BaseModel):
 
     expires_in_secs: int = Field(alias="expires_in")
     """The lifetime in seconds of the access token."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def unwrap_envelope(cls, v: Any) -> Any:  # noqa: ANN401
+        """Handle both direct and wrapped responses."""
+        if isinstance(v, dict) and "data" in v and isinstance(v["data"], dict) and "access_token" in v["data"]:
+            return v["data"]
+        return v
 
 
 class TokenCache(BaseModel):

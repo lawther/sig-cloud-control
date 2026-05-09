@@ -45,16 +45,35 @@ sig-cloud-control = "sig_cloud_control.cli_app:app"
 dev = [
   "pytest~=9.0",
   "pytest-asyncio~=1.3",
+  "pytest-cov>=7.1.0",
   "python-lint-hooks",
   "ruff~=0.15",
   "ty~=0.0.32",
 ]
 
 [tool.uv.sources]
-python-lint-hooks = { git = "https://github.com/lawther/python-lint-hooks", tag = "v0.4.0" }
+python-lint-hooks = { git = "https://github.com/lawther/python-lint-hooks", tag = "v0.6.1" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sig_cloud_control"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=sig_cloud_control --cov-report=term-missing --cov-branch"
+
+[tool.coverage.run]
+branch = true
+source = ["sig_cloud_control"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "def __repr__",
+  "raise NotImplementedError",
+]
 
 [tool.ruff]
 line-length = 120
@@ -126,7 +145,7 @@ per-file-ignores = { "tests/*" = [
   "S105",
   # S106: Hardcoded password in function arguments (Allowed in tests for dummy data)
   "S106",
-] }
+], "scripts/*" = ["S603", "S607"] }
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -20,7 +20,14 @@ extra-lints:
 
 # Run tests
 test:
-    uv run pytest
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Running tests..."
+    cov_json=$(mktemp)
+    trap 'rm -f "$cov_json"' EXIT
+    uv run pytest --cov=sig_cloud_control --cov-branch --cov-report=json:"$cov_json"
+    uv run python scripts/branch_summary.py "$cov_json"
+    echo "Tests passed!"
 
 # Setup the development environment from a fresh clone
 setup-dev:

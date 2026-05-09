@@ -7,7 +7,7 @@ from typing import NamedTuple
 import typer
 from pydantic import ValidationError
 
-from sig_cloud_control.models import Config, Region
+from sig_cloud_control.models import Config
 
 from .constants import _DEFAULT_CONFIG_PATH
 from .setup import perform_setup
@@ -64,15 +64,8 @@ def _try_load_config(config_path: Path) -> ConfigSources | None:
 
     try:
         with open(config_path, "rb") as f:
-            file_data: dict[str, object] = tomllib.load(f)
-
-        # TOML parses region as a plain string; coerce to Region for strict-mode validation.
-        # (env_settings handles this automatically; init_settings does not.)
-        if "region" in file_data and isinstance(file_data["region"], str):
-            file_data["region"] = Region(file_data["region"])
-
-        # env_settings overrides init_settings per Config.settings_customise_sources.
-        config = Config(**file_data)
+            # env_settings overrides init_settings per Config.settings_customise_sources.
+            config = Config.model_validate(tomllib.load(f))
         return ConfigSources(env_vars_present=env_vars_present, config_file=config_path, config=config)
     except ValidationError as e:
         typer.secho(
