@@ -34,7 +34,7 @@ class APIKey(StrEnum):
     USER_DEVICE_ID = "userDeviceId"
     USERNAME = "username"
     PASSWORD = "password"  # noqa: S105
-    AUTHORIZATION = "authorization"
+    AUTHORIZATION = "authorization"  # noqa: ML500
     CONTENT_TYPE = "content-type"
 
 
@@ -76,7 +76,7 @@ class SigCloudClient:
     """Client for interacting with Sigen Cloud API."""
 
     def __init__(self, config: Config, cache_path: Path | None = _DEFAULT_CACHE_PATH) -> None:
-        """Initialize the client with configuration."""
+        """Initialise the client with configuration."""
         self.config = config
         self.cache_path = cache_path
         self.client = httpx.AsyncClient()
