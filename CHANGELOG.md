@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/lawther/sig-cloud-control/compare/v0.4.0...v0.5.0) (2026-05-15)
+
+
+### Features
+
+* add version-controlled git hooks and auto-install on precommit ([278275f](https://github.com/lawther/sig-cloud-control/commit/278275f288cd9c3e55c6d30a8046c68fe2fc6c58))
+
+
+### Bug Fixes
+
+* **lint:** resolve Australian English spelling and external API lints ([f830716](https://github.com/lawther/sig-cloud-control/commit/f8307164e6094e2a2cc94450dd1fe43a9ad624df))
+* resolve ML400 unvalidated data lints and update test coverage ([6beb67d](https://github.com/lawther/sig-cloud-control/commit/6beb67ded64db21f47d2138ee790aaee0b24c375))
+
 ## [0.4.0](https://github.com/lawther/sig-cloud-control/compare/v0.3.3...v0.4.0) (2026-04-30)
 
 
