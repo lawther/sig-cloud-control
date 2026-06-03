@@ -52,7 +52,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-python-lint-hooks = { git = "https://github.com/lawther/python-lint-hooks", tag = "v0.7.7" }
+python-lint-hooks = { git = "https://github.com/lawther/python-lint-hooks", tag = "v0.10.0" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sig_cloud_control"]
