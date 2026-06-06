@@ -48,7 +48,7 @@ dev = [
   "pytest-cov>=7.1.0",
   "python-lint-hooks",
   "ruff~=0.15",
-  "ty~=0.0.32",
+  "ty~=0.0.44",
 ]
 
 [tool.uv.sources]
