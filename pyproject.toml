@@ -140,3 +140,8 @@ per-file-ignores = { "tests/*" = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ty.rules]
+possibly-missing-submodule = "error"
+unused-type-ignore-comment = "error"
+
