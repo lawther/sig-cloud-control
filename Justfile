@@ -16,7 +16,7 @@ lint:
 
 # Check for bare dict/tuple return types and classes defined inside functions (ML001, ML002)
 extra-lints:
-    @uv run ml-lint src/
+    @uv run ml-lints src/
 
 # Run tests
 test:
