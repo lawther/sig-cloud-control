@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/lawther/sig-cloud-control/compare/v0.5.0...v0.5.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **ci:** specify repo when publishing release ([9041d85](https://github.com/lawther/sig-cloud-control/commit/9041d85f5b3c0fc9ce0c387e5d621e12b410d346))
+
 ## [0.5.0](https://github.com/lawther/sig-cloud-control/compare/v0.4.0...v0.5.0) (2026-10-10)
 
 
