@@ -24,7 +24,7 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-  "cryptography~=46.0",
+  "cryptography>=46,<51",
   "httpx~=0.28",
   "platformdirs>=4.0",
   "pydantic-settings>=2.14.0",
