@@ -1,3 +1,6 @@
+# The shared recipes (synced from agent_rules) call this rather than spelling a runner.
+uv_run := "uv run"
+
 # Display help
 default:
     @just --list
@@ -92,3 +95,17 @@ setup:
 # Run the CLI application
 run *args:
     uv run sig-cloud-control {{args}}
+
+# BEGIN SHARED RECIPES (AI_READINESS) sha256:45e10abdfa181601
+# Generated from agent_rules/snippets/ai_readiness.just. Do not edit inside this block:
+#      edit snippets/ai_readiness.just, then run `just sync-justfile-recipes` in agent_rules.
+
+# Analyse project source files to evaluate AI agent readiness
+analyse-ai-readiness *args:
+    @{{uv_run}} shared_scripts/analyse_ai_readiness.py {{args}}
+
+# Check source file size thresholds for AI agent readiness (fails if threshold breached)
+check-ai-readiness *args:
+    @{{uv_run}} shared_scripts/analyse_ai_readiness.py --fail-on {{args}}
+
+# END SHARED RECIPES (AI_READINESS)
