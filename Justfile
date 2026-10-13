@@ -1,9 +1,15 @@
-# The shared recipes (synced from agent_rules) call this rather than spelling a runner.
-uv_run := "uv run"
+# BEGIN SHARED RECIPES (DEFAULT) sha256:18670817947290ab
+# Generated from agent_rules/snippets/default.just. Do not edit inside this block:
+#      edit snippets/default.just, then run `just sync-justfile-recipes` in agent_rules.
 
-# Display help
+# List available recipes
 default:
     @just --list
+
+# END SHARED RECIPES (DEFAULT)
+
+# The shared recipes (synced from agent_rules) call this rather than spelling a runner.
+uv_run := "uv run"
 
 # Sync project dependencies
 sync:
