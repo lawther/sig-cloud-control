@@ -423,5 +423,5 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
+    except Exception:  # noqa: BLE001 - a hook bug must fail open, not block every Bash call
         allow()
