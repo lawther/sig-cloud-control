@@ -133,7 +133,14 @@ per-file-ignores = { "tests/*" = [
   "S105",
   # S106: Hardcoded password in function arguments (Allowed in tests for dummy data)
   "S106",
-], "scripts/*" = ["S603", "S607"] }
+], "scripts/*" = ["S603", "S607"], ".claude/hooks/*" = [
+  # Synced from agent_rules; they are standalone scripts run by path, invoke `bd` with
+  # shell=False, and run under whatever python3 is first on PATH, which may predate datetime.UTC.
+  "INP001",
+  "S603",
+  "S607",
+  "UP017",
+] }
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
