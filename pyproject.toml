@@ -141,10 +141,20 @@ per-file-ignores = { "tests/*" = [
   "S603",
   "S607",
   "UP017",
+], "shared_scripts/*" = [
+  # Synced from agent_rules; standalone PEP 723 scripts that drive git and other tools via PATH.
+  "INP001",
+  "RUF100",
+  "S603",
+  "S607",
 ] }
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ty.src]
+# Synced PEP 723 scripts declare their own dependencies, which ty cannot see from this venv.
+exclude = ["shared_scripts/"]
 
 [tool.ty.rules]
 possibly-missing-submodule = "error"
