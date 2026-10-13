@@ -137,6 +137,7 @@ per-file-ignores = { "tests/*" = [
   # Synced from agent_rules; they are standalone scripts run by path, invoke `bd` with
   # shell=False, and run under whatever python3 is first on PATH, which may predate datetime.UTC.
   "INP001",
+  "RUF100", # their noqa directives name rules this repo does not select; ruff would strip them
   "S603",
   "S607",
   "UP017",
