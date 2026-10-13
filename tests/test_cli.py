@@ -30,13 +30,12 @@ def test_charge_command() -> None:
         # load_config is called once with whatever path was resolved
         mock_load.assert_called_once()
         mock_execute.assert_called_once()
-        # The first arg is the config from mock_load.return_value
-        args, _ = mock_execute.call_args
-        # execute_action(config, action, duration, power, verbose)
+        # The positional order is config, action, duration, power; verbose is keyword-only.
+        args, kwargs = mock_execute.call_args
         assert args[1] == "charge"
         assert args[2] == MOCK_DURATION
         assert args[3] == MOCK_POWER
-        assert args[4] is False  # verbose default
+        assert kwargs["verbose"] is False  # verbose default
 
 
 def test_hold_rejects_power_option() -> None:

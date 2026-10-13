@@ -33,10 +33,11 @@ def charge(
     duration: DurationArg,
     power: PowerOpt = None,
     config: ConfigOpt = None,
+    *,
     verbose: VerboseOpt = False,
 ) -> None:
     """Charge battery from the grid for a specified duration."""
-    _run_command_action("charge", duration, power, config, verbose)
+    _run_command_action("charge", duration, power, config, verbose=verbose)
 
 
 @app.command()
@@ -44,16 +45,18 @@ def discharge(
     duration: DurationArg,
     power: PowerOpt = None,
     config: ConfigOpt = None,
+    *,
     verbose: VerboseOpt = False,
 ) -> None:
     """Discharge battery for a specified duration."""
-    _run_command_action("discharge", duration, power, config, verbose)
+    _run_command_action("discharge", duration, power, config, verbose=verbose)
 
 
 @app.command()
 def hold(
     duration: DurationArg,
     config: ConfigOpt = None,
+    *,
     verbose: VerboseOpt = False,
 ) -> None:
     """Hold battery at its current state of charge for a specified duration."""
@@ -64,6 +67,7 @@ def hold(
 def self_consumption(
     duration: DurationArg,
     config: ConfigOpt = None,
+    *,
     verbose: VerboseOpt = False,
 ) -> None:
     """Enable self-consumption mode for a specified duration."""
@@ -73,6 +77,7 @@ def self_consumption(
 @app.command()
 def cancel(
     config: ConfigOpt = None,
+    *,
     verbose: VerboseOpt = False,
 ) -> None:
     """Return the battery to its configured default mode."""

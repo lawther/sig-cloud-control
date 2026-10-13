@@ -63,7 +63,7 @@ def _try_load_config(config_path: Path) -> ConfigSources | None:
         return None
 
     try:
-        with open(config_path, "rb") as f:
+        with config_path.open("rb") as f:
             # env_settings overrides init_settings per Config.settings_customise_sources.
             config = Config.model_validate(tomllib.load(f))
         return ConfigSources(env_vars_present=env_vars_present, config_file=config_path, config=config)

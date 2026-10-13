@@ -33,7 +33,7 @@ def test_encrypt_password() -> None:
 @pytest.mark.asyncio
 async def test_set_mode_station_id_unknown(client: SigCloudClient) -> None:
     client.access_token = "fake_token"
-    client._station_id = None
+    client.station_id = None
     with pytest.raises(SigCloudError, match=r"Station ID unknown. Login may have failed to retrieve it."):
         await client.charge_battery(60)
 
@@ -153,7 +153,7 @@ async def test_cache_disabled(config: Config) -> None:
     assert client.cache_path is None
 
     with patch("sig_cloud_control.client.core.load_cache") as mock_load:
-        assert await client._try_login_from_cache() is False
+        assert await client.try_login_from_cache() is False
         mock_load.assert_not_called()
 
     mock_response = MagicMock(spec=httpx.Response)
@@ -178,7 +178,7 @@ def test_get_login_payload_no_password() -> None:
     config = Config.model_construct(username="test@example.com", region=Region.AUS)
     client = SigCloudClient(config)
     with pytest.raises(SigCloudError, match="Neither password nor password_encoded provided"):
-        client._get_login_payload()
+        client.get_login_payload()
 
 
 def test_client_urls_and_headers_use_region() -> None:
@@ -190,9 +190,9 @@ def test_client_urls_and_headers_use_region() -> None:
     )
     client = SigCloudClient(eu_config)
 
-    assert "api-eu" in client._auth_url
-    assert "api-eu" in client._manual_mode_url
-    assert "api-eu" in client._station_info_url
+    assert "api-eu" in client.auth_url
+    assert "api-eu" in client.manual_mode_url
+    assert "api-eu" in client.station_info_url
     assert client.client.headers["client-server"] == "eu"
     assert "app-eu" in client.client.headers["origin"]
     assert "app-eu" in client.client.headers["referer"]

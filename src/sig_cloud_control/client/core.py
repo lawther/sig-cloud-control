@@ -3,14 +3,14 @@ import time
 from enum import StrEnum
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, NamedTuple, cast
+from typing import Any, NamedTuple, Self, cast
 from uuid import uuid4
 
 import httpx
 from pydantic import ValidationError
 
-from .._encryption import encrypt_password
-from ..models import (
+from sig_cloud_control._encryption import encrypt_password
+from sig_cloud_control.models import (
     MAX_DURATION_MINS,
     Config,
     LoginResponse,
@@ -18,6 +18,7 @@ from ..models import (
     SetModeRequest,
     StationInfoResponse,
 )
+
 from .cache import _DEFAULT_CACHE_PATH, load_cache, save_cache
 from .exceptions import APIError, AuthenticationError, SigCloudError, StationError
 
@@ -81,12 +82,12 @@ class SigCloudClient:
         self.cache_path = cache_path
         self.client = httpx.AsyncClient()
         self.access_token: str | None = None
-        self._station_id: int | None = config.station_id
+        self.station_id: int | None = config.station_id
 
         _base_url = f"https://api-{config.region.value}.sigencloud.com"
-        self._auth_url = f"{_base_url}/auth/oauth/token"
-        self._manual_mode_url = f"{_base_url}/device/energy-profile/instant/manunal"
-        self._station_info_url = f"{_base_url}/device/owner/station/home"
+        self.auth_url = f"{_base_url}/auth/oauth/token"
+        self.manual_mode_url = f"{_base_url}/device/energy-profile/instant/manunal"
+        self.station_info_url = f"{_base_url}/device/owner/station/home"
 
         # Setup base headers mimicking the app
         self._session_id = str(uuid4())
@@ -118,7 +119,7 @@ class SigCloudClient:
             }
         )
 
-    async def __aenter__(self) -> "SigCloudClient":
+    async def __aenter__(self) -> Self:
         """Enter the async context manager."""
         return self
 
@@ -132,7 +133,7 @@ class SigCloudClient:
             ts=str(int(time.time() * 1_000_000)),
         )
 
-    async def _try_login_from_cache(self) -> bool:
+    async def try_login_from_cache(self) -> bool:
         """Attempt to load credentials from the local cache. Returns True if successful."""
         if self.cache_path is None:
             return False
@@ -142,8 +143,8 @@ class SigCloudClient:
             return False
 
         # Recover station_id from cache if we don't have it yet
-        if self._station_id is None:
-            self._station_id = cache.station_id
+        if self.station_id is None:
+            self.station_id = cache.station_id
 
         if cache.expires_at > time.time() + 60:  # Valid for at least another minute
             logger.debug("Using cached token")
@@ -152,7 +153,7 @@ class SigCloudClient:
             return True
         return False
 
-    def _get_login_payload(self) -> LoginPayload:
+    def get_login_payload(self) -> LoginPayload:
         """Prepare the payload for the login request."""
         if self.config.password_encoded:
             password_to_send = self.config.password_encoded
@@ -171,9 +172,9 @@ class SigCloudClient:
             password=password_to_send,
         )
 
-    async def login(self, use_cache: bool = True) -> None:
+    async def login(self, *, use_cache: bool = True) -> None:
         """Authenticate with the Sigen API and store the access token. Checks cache first."""
-        if use_cache and await self._try_login_from_cache():
+        if use_cache and await self.try_login_from_cache():
             return
 
         logger.info("Logging in to Sigen Cloud as %s", self.config.username)
@@ -181,12 +182,12 @@ class SigCloudClient:
         headers[APIKey.AUTHORIZATION] = "Basic c2lnZW46c2lnZW4="
         headers[APIKey.CONTENT_TYPE] = "application/x-www-form-urlencoded"
 
-        data = self._get_login_payload().to_dict()
+        data = self.get_login_payload().to_dict()
 
         response = await self.client.post(
-            self._auth_url,
-            headers=cast(dict[str, str], headers),
-            data=cast(dict[str, Any], data),
+            self.auth_url,
+            headers=cast("dict[str, str]", headers),
+            data=cast("dict[str, Any]", data),
         )
 
         if response.status_code != HTTPStatus.OK:
@@ -196,41 +197,41 @@ class SigCloudClient:
         try:
             login_response = LoginResponse.model_validate(response.json())
         except ValidationError as e:
-            logger.error("Failed to parse login response: %s", response.text)
+            logger.exception("Failed to parse login response: %s", response.text)
             raise APIError(f"Failed to parse login response. Raw payload: {response.text}. Error: {e}") from e
         except Exception as e:
-            logger.error("Unexpected error parsing login response: %s", response.text)
+            logger.exception("Unexpected error parsing login response: %s", response.text)
             raise APIError(f"Unexpected error parsing login response: {e}. Raw payload: {response.text}") from e
 
         self.access_token = login_response.access_token
         self.client.headers[APIKey.AUTHORIZATION] = f"bearer {self.access_token}"
 
         # If station_id wasn't provided in config, fetch it
-        if self._station_id is None:
-            await self._fetch_station_id()
+        if self.station_id is None:
+            await self.fetch_station_id()
 
         await save_cache(
             self.cache_path,
             self.access_token,
             login_response.expires_in_secs,
-            self._station_id,
+            self.station_id,
         )
         logger.info("Successfully logged in and cached token")
 
-    async def _fetch_station_id(self) -> None:
+    async def fetch_station_id(self) -> None:
         """Fetch the station ID from the home info endpoint."""
-        logger.debug("Fetching station ID from %s", self._station_info_url)
+        logger.debug("Fetching station ID from %s", self.station_info_url)
         headers = self._get_ts_headers().to_dict()
-        response = await self.client.get(self._station_info_url, headers=cast(dict[str, str], headers))
+        response = await self.client.get(self.station_info_url, headers=cast("dict[str, str]", headers))
         response.raise_for_status()
 
         station_resp = StationInfoResponse.model_validate(response.json())
-        self._station_id = station_resp.data.station_id
+        self.station_id = station_resp.data.station_id
 
-        if self._station_id is None:
+        if self.station_id is None:
             logger.error("Could not retrieve station ID. Response: %s", response.text)
             raise StationError("Could not retrieve station ID from Sigen Cloud.")
-        logger.debug("Fetched station ID: %s", self._station_id)
+        logger.debug("Fetched station ID: %s", self.station_id)
 
     async def _set_mode_raw(
         self,
@@ -242,11 +243,11 @@ class SigCloudClient:
         if not self.access_token:
             raise SigCloudError("Not logged in. Call login() first.")
 
-        if self._station_id is None:
+        if self.station_id is None:
             raise StationError("Station ID unknown. Login may have failed to retrieve it.")
 
         request_data = SetModeRequest(
-            station_id=self._station_id,
+            station_id=self.station_id,
             mode=mode,
             duration=duration,
             power_limitation=power_limitation,
@@ -257,8 +258,8 @@ class SigCloudClient:
         headers[APIKey.CONTENT_TYPE] = "application/json; charset=utf-8"
 
         response = await self.client.put(
-            self._manual_mode_url,
-            headers=cast(dict[str, str], headers),
+            self.manual_mode_url,
+            headers=cast("dict[str, str]", headers),
             json=request_data.model_dump(mode="json", by_alias=True),
         )
         response.raise_for_status()

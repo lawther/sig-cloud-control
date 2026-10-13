@@ -52,9 +52,8 @@ def test_cli_app_does_not_import_client_submodules() -> None:
     Importing from sig_cloud_control.client.<submodule> directly couples cli_app to
     internal implementation details and breaks the facade contract.
     """
-    # Matches any direct import from a client submodule, e.g.:
-    #   from sig_cloud_control.client.encryption import ...
-    #   import sig_cloud_control.client.core
+    # Matches any reference to a client submodule, such as sig_cloud_control.client.encryption
+    # or sig_cloud_control.client.core, in either an import or a from-import.
     _client_submodule_import = re.compile(r"sig_cloud_control\.client\.\w+")
 
     cli_app_dir = _SRC_DIR / "sig_cloud_control" / "cli_app"

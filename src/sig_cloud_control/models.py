@@ -1,6 +1,6 @@
 import base64
 from enum import StrEnum
-from typing import Any, Final, NamedTuple, Self
+from typing import Any, Final, NamedTuple, Self, override
 
 from pydantic import (
     BaseModel,
@@ -69,6 +69,7 @@ class Config(BaseSettings):
     """The Sigen Cloud regional data centre to connect to."""
 
     @classmethod
+    @override
     def settings_customise_sources(
         cls,
         settings_cls: type[BaseSettings],
@@ -104,14 +105,12 @@ class Config(BaseSettings):
             return None
         try:
             decoded = base64.b64decode(v, validate=True)
-            if len(decoded) == 0 or len(decoded) % PASSWORD_LEN_BYTES != 0:
-                raise ValueError(
-                    f"Decoded password length ({len(decoded)}) must be a positive multiple of {PASSWORD_LEN_BYTES}"
-                )
-        except Exception as e:
-            if isinstance(e, ValueError) and f"multiple of {PASSWORD_LEN_BYTES}" in str(e):
-                raise
+        except ValueError as e:
             raise ValueError("password_encoded must be a valid base64 string") from e
+        if len(decoded) == 0 or len(decoded) % PASSWORD_LEN_BYTES != 0:
+            raise ValueError(
+                f"Decoded password length ({len(decoded)}) must be a positive multiple of {PASSWORD_LEN_BYTES}"
+            )
         return v
 
 
@@ -165,7 +164,7 @@ class SetModeRequest(BaseModel):
     enable: bool = False
 
     @field_serializer("duration", "power_limitation")
-    def serialise_to_str(self, v: int | float | None) -> str:
+    def serialise_to_str(self, v: float | None) -> str:
         return str(v) if v is not None else ""
 
     @model_validator(mode="after")

@@ -7,7 +7,7 @@ from typing import Final
 from platformdirs import user_cache_path
 from pydantic import ValidationError
 
-from ..models import TokenCache
+from sig_cloud_control.models import TokenCache
 
 _DEFAULT_CACHE_PATH: Final[Path] = user_cache_path("sig-cloud-control") / "token-cache.json"
 
@@ -19,9 +19,7 @@ async def load_cache(cache_path: Path | None) -> TokenCache | None:
     try:
         content = await asyncio.to_thread(cache_path.read_text)
         return TokenCache.model_validate_json(content)
-    except (FileNotFoundError, ValidationError):
-        return None
-    except Exception:
+    except (OSError, UnicodeDecodeError, ValidationError):
         return None
 
 

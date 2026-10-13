@@ -18,6 +18,7 @@ async def execute_action(
     action: str,
     duration: int = 0,
     power: float | None = None,
+    *,
     verbose: bool = False,
 ) -> None:
     """Internal helper to run the async client logic."""
@@ -52,12 +53,13 @@ def _run_command_action(
     duration: int = 0,
     power: float | None = None,
     config: str | None = None,
+    *,
     verbose: bool = False,
 ) -> None:
     """Internal helper to load config and run an action."""
     conf = load_config(_resolve_config_path(config))
     try:
-        asyncio.run(execute_action(conf, action, duration, power, verbose))
+        asyncio.run(execute_action(conf, action, duration, power, verbose=verbose))
     except SigCloudError as e:
         typer.secho(f"❌ Sigen API Error: {e}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from e

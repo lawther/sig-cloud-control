@@ -30,15 +30,15 @@ async def test_fetch_station_id_success(config_no_station: Config) -> None:
     mock_response.json.return_value = {"code": 0, "data": {"stationId": MOCK_STATION_ID_1}}
 
     with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=mock_response) as mock_get:
-        await client._fetch_station_id()
-        assert client._station_id == MOCK_STATION_ID_1
+        await client.fetch_station_id()
+        assert client.station_id == MOCK_STATION_ID_1
         mock_get.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_try_login_from_cache_recovers_station_id_even_if_expired(config_no_station: Config) -> None:
     client = SigCloudClient(config_no_station)
-    assert client._station_id is None
+    assert client.station_id is None
 
     # Mock an expired cache that has a station_id
     expired_cache = TokenCache(
@@ -49,10 +49,10 @@ async def test_try_login_from_cache_recovers_station_id_even_if_expired(config_n
 
     with patch("sig_cloud_control.client.core.load_cache", new_callable=AsyncMock, return_value=expired_cache):
         # Should return False because token is expired
-        result = await client._try_login_from_cache()
+        result = await client.try_login_from_cache()
         assert result is False
         # BUT station_id should have been recovered
-        assert client._station_id == MOCK_STATION_ID_2
+        assert client.station_id == MOCK_STATION_ID_2
 
 
 @pytest.mark.asyncio
@@ -81,12 +81,12 @@ async def test_login_skips_fetch_if_station_id_in_cache(config_no_station: Confi
         patch("sig_cloud_control.client.core.save_cache", new_callable=AsyncMock) as mock_save,
     ):
         await client.login()
-        assert client._station_id == MOCK_STATION_ID_3
+        assert client.station_id == MOCK_STATION_ID_3
         mock_get_station.assert_called_once()
         mock_save.assert_called_once()
 
     # 2. Second login (expired cache with station_id)
-    client._station_id = None  # Reset for test
+    client.station_id = None  # Reset for test
     expired_cache = TokenCache(
         access_token="token1",
         expires_at=time.time() - 10,  # Expired
@@ -100,6 +100,6 @@ async def test_login_skips_fetch_if_station_id_in_cache(config_no_station: Confi
         patch("sig_cloud_control.client.core.save_cache", new_callable=AsyncMock),
     ):
         await client.login()
-        assert client._station_id == MOCK_STATION_ID_3
+        assert client.station_id == MOCK_STATION_ID_3
         # Should NOT have called get station info again!
         mock_get_station_2.assert_not_called()

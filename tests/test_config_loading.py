@@ -25,7 +25,7 @@ def test_load_config_env_vars_only() -> None:
         assert config.region == Region.AUS
 
 
-def test_load_config_file_with_env_override() -> None:
+def test_load_config_file_with_env_override(tmp_path: Path) -> None:
     """Test that environment variables override file settings."""
     file_content = (
         b'username = "file@example.com"\n'
@@ -39,12 +39,11 @@ def test_load_config_file_with_env_override() -> None:
         "SIGEN_REGION": "eu",
     }
 
-    with (
-        patch("builtins.open", mock_open(read_data=file_content)),
-        patch("pathlib.Path.exists", return_value=True),
-        patch.dict(os.environ, env),
-    ):
-        config = load_config(Path("config.toml"))
+    config_path = tmp_path / "config.toml"
+    config_path.write_bytes(file_content)
+
+    with patch.dict(os.environ, env):
+        config = load_config(config_path)
         assert config.username == "override@example.com"
         assert config.station_id == OVERRIDE_STATION_ID
         # password_encoded should still be from file
@@ -83,7 +82,7 @@ def test_load_config_no_env_no_file_triggers_setup() -> None:
     with (
         patch("pathlib.Path.exists", side_effect=[False, True]),
         patch("sig_cloud_control.cli_app.config.perform_setup") as mock_setup,
-        patch("builtins.open", mock_open(read_data=file_content)),
+        patch("pathlib.Path.open", mock_open(read_data=file_content)),
         patch.dict(os.environ, {}, clear=True),
     ):
         mock_setup.return_value = None

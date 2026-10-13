@@ -1,0 +1,11 @@
+# sig-cloud-control's own ruff config. `extend` pulls in the fleet's shared config, synced
+# here verbatim by agent_rules' sync_lint_config.py -- do not hand-edit ruff_shared.toml.
+extend = "ruff_shared.toml"
+
+[lint.extend-per-file-ignores]
+"tests/**/*.py" = [
+    "S101",    # assert is how pytest asserts
+    "S105",    # hardcoded dummy passwords are test data
+    "S106",    # hardcoded dummy passwords in call arguments are test data
+    "PLR2004", # expected values in assertions are the point of a test
+]
