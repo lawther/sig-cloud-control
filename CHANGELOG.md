@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/lawther/sig-cloud-control/compare/v0.5.1...v0.5.2) (2026-11-01)
+
+
+### Bug Fixes
+
+* **deps:** bump the security group across 1 directory with 2 updates ([74b91f1](https://github.com/lawther/sig-cloud-control/commit/74b91f11dd37eef00e8d3d8868673f32bc186487))
+
 ## [0.5.1](https://github.com/lawther/sig-cloud-control/compare/v0.5.0...v0.5.1) (2026-10-10)
 
 
