@@ -85,7 +85,7 @@ setup-git-hooks:
 # Run linting and tests (pre-commit check)
 # This Justfile is the Single Source Of Truth (SSOT) for all pre-commit checks.
 # No additional linting or testing logic should be added anywhere else (e.g. CI configs).
-precommit:
+precommit: precommit-fleet
     #!/usr/bin/env bash
     if [[ "$(git config core.hooksPath 2>/dev/null)" != ".githooks" ]]; then
         echo "Git hooks not configured — installing now..."
