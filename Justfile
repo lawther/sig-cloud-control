@@ -25,7 +25,7 @@ fleet-gate-core:
 
 # END FLEET RECIPES (CORE)
 
-# The shared recipes (synced from agent_rules) call this rather than spelling a runner.
+# The shared recipes (synced from fleet) call this rather than spelling a runner.
 uv_run := "uv run"
 
 # Sync project dependencies

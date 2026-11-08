@@ -1,5 +1,5 @@
 # sig-cloud-control's own ruff config. `extend` pulls in the fleet's shared config, synced
-# here verbatim by agent_rules' sync_lint_config.py -- do not hand-edit ruff_shared.toml.
+# here verbatim by fleet's lint sync -- do not hand-edit ruff_shared.toml.
 extend = "ruff_shared.toml"
 
 [lint.extend-per-file-ignores]
