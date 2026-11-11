@@ -19,7 +19,7 @@ async def load_cache(cache_path: Path | None) -> TokenCache | None:
     try:
         content = await asyncio.to_thread(cache_path.read_text)
         return TokenCache.model_validate_json(content)
-    except (OSError, UnicodeDecodeError, ValidationError):
+    except OSError, UnicodeDecodeError, ValidationError:
         return None
 
 
