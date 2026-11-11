@@ -7,7 +7,7 @@ name = "sig-cloud-control"
 version = "0.5.1"
 description = "Control Sigenergy battery via Sigen Cloud"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 license = "Apache-2.0"
 authors = [{ name = "Mike Lawther", email = "mike.lawther@gmail.com" }]
 keywords = ["sigenergy", "sigen", "battery", "solar", "energy-storage", "iot"]
