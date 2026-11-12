@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.2](https://github.com/lawther/sig-cloud-control/compare/v0.5.1...v0.5.2) (2026-11-12)
+
+
+### Bug Fixes
+
+* **core:** pin fleet-managed files to LF in .gitattributes ([3d49b45](https://github.com/lawther/sig-cloud-control/commit/3d49b45f4d95466cf97998cce24f782ddee20158))
+* **deps:** bump the security group across 1 directory with 2 updates ([74b91f1](https://github.com/lawther/sig-cloud-control/commit/74b91f11dd37eef00e8d3d8868673f32bc186487))
+* **packaging:** drop Python version classifiers that the floor contradicts ([2a36265](https://github.com/lawther/sig-cloud-control/commit/2a362655c73bbe60cdef466f3e62f9e677188d2d))
+
 ## [0.5.1](https://github.com/lawther/sig-cloud-control/compare/v0.5.0...v0.5.1) (2026-10-10)
 
 
